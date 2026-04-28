@@ -17,7 +17,7 @@ services:
       - key: APP_NAME
         value: Barberhub
       - key: DB_PATH
-        value: /data/barbershop.db
+        value: ./barbershop.db
       - key: LOG_PII
         value: "false"
       - key: OPEN_HOUR
@@ -56,7 +56,6 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+    # Note: Render free tier δεν υποστηρίζει disks. Η βάση είναι ephemeral
+    # (χάνεται σε redeploy). Για persistent storage → upgrade σε Starter ($7)
+    # ή χρησιμοποίησε Railway (έχει persistent volume στο free tier).
