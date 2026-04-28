@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Κράτηση</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <style>
+    /* Page-specific micro-tweaks */
+    .step-hero { padding: 16px 22px 4px; }
+    .step-hero .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 8px; }
+    .step-hero h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; margin: 0; line-height: 1.12; }
+    .step-hero p { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+    .progress { display: flex; gap: 4px; padding: 0 22px 8px; }
+    .progress .seg { flex: 1; height: 3px; border-radius: 2px; background: var(--line); transition: background var(--t-base); }
+    .progress .seg.done { background: var(--ink); }
+    .summary-card { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+    .summary-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .summary-row .k { font-size: 12px; color: var(--muted); }
+    .summary-row .v { font-size: 14px; font-weight: 600; text-align: right; }
+    .check-circle { width: 80px; height: 80px; border-radius: 50%; background: var(--ink); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-size: 38px; margin: 0 auto; animation: pop 600ms cubic-bezier(.2,.8,.4,1); }
+  </style>
+</head>
+<body>
+<div class="app no-nav">
+
+  <!-- Topbar: minimal, just back -->
+  <div class="topbar" id="topbar">
+    <button class="back" id="backBtn" style="display:none" aria-label="Πίσω">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="title-block">
+      <div class="title" id="topbarTitle">Κράτηση</div>
+      <div class="title-sub" id="topbarSub"></div>
+    </div>
+  </div>
+
+  <!-- Progress bar (hidden on shops/done) -->
+  <div class="progress" id="progress" style="display:none">
+    <div class="seg" data-seg="1"></div>
+    <div class="seg" data-seg="2"></div>
+    <div class="seg" data-seg="3"></div>
+    <div class="seg" data-seg="4"></div>
+    <div class="seg" data-seg="5"></div>
+  </div>
+
+  <!-- ============ VIEW: SHOPS ============ -->
+  <section class="view" id="view-shops" style="display:none">
+    <div class="hero">
+      <h1>Κλείσε ραντεβού</h1>
+      <p>Επίλεξε κατάστημα.</p>
+    </div>
+    <div class="section" id="shopsList"></div>
+  </section>
+
+  <!-- ============ VIEW: BARBERS ============ -->
+  <section class="view" id="view-barbers" style="display:none">
+    <div class="step-hero">
+      <div class="eyebrow">Βήμα 1 από 5</div>
+      <h1>Διάλεξε κουρέα</h1>
+    </div>
+    <div class="section" id="barbersList"></div>
+  </section>
+
+  <!-- ============ VIEW: SERVICE ============ -->
+  <section class="view" id="view-service" style="display:none">
+    <div class="step-hero">
+      <div class="eyebrow">Βήμα 2 από 5</div>
+      <h1>Τι θες σήμερα;</h1>
+    </div>
+    <div class="section">
+      <div class="tiles" id="services"></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: DATE ============ -->
+  <section class="view" id="view-date" style="display:none">
+    <div class="step-hero">
+      <div class="eyebrow">Βήμα 3 από 5</div>
+      <h1>Πότε σε βολεύει;</h1>
+    </div>
+    <div class="section">
+      <div class="week-strip" id="weekStrip" style="margin-bottom: 16px"></div>
+      <p class="muted small center">Σύρε για επόμενες μέρες</p>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: TIME ============ -->
+  <section class="view" id="view-time" style="display:none">
+    <div class="step-hero">
+      <div class="eyebrow">Βήμα 4 από 5</div>
+      <h1>Τι ώρα;</h1>
+      <p id="timeSub">—</p>
+    </div>
+    <div class="section">
+      <div class="legend" style="margin-bottom: 14px">
+        <span class="item"><span class="dot g"></span>Στην ώρα</span>
+        <span class="item"><span class="dot o"></span>Πιο γεμάτη (±15')</span>
+        <span class="item"><span class="dot r"></span>Γεμάτη</span>
+      </div>
+      <div class="slots-grid" id="slotsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: DETAILS ============ -->
+  <section class="view" id="view-details" style="display:none">
+    <div class="step-hero">
+      <div class="eyebrow">Βήμα 5 από 5</div>
+      <h1>Τα στοιχεία σου</h1>
+      <p>Σχεδόν τελείωσες.</p>
+    </div>
+    <div class="section">
+      <div class="summary-card" style="margin-bottom: 18px" id="detailsSummary"></div>
+      <div class="card">
+        <div class="field">
+          <label for="name">Όνομα</label>
+          <input id="name" class="input" type="text" placeholder="Πώς σε λένε;" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="phone">Κινητό</label>
+          <input id="phone" class="input" type="tel" placeholder="6912345678" autocomplete="tel" inputmode="tel" />
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="muted">(προαιρετικό)</span></label>
+          <input id="email" class="input" type="email" placeholder="για επιβεβαίωση" autocomplete="email" inputmode="email" />
+        </div>
+        <div class="field">
+          <label for="notes">Σημείωση για τον κουρέα <span class="muted">(προαιρετικό)</span></label>
+          <textarea id="notes" class="textarea" maxlength="200" placeholder="π.χ. πρώτη φορά εδώ, μηχανή 0.5..."></textarea>
+        </div>
+      </div>
+      <div id="alert" class="alert" style="display:none; margin-top: 14px"></div>
+      <p class="muted small" style="margin-top: 14px; text-align: center">
+        Η κράτηση είναι αίτημα — ο κουρέας θα την επιβεβαιώσει σύντομα.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: DONE ============ -->
+  <section class="view" id="view-done" style="display:none">
+    <div class="hero" style="text-align:center; padding-top: 60px;">
+      <div class="check-circle">✓</div>
+      <h1 style="margin-top: 24px">Στάλθηκε</h1>
+      <p>Ο κουρέας θα δει το αίτημά σου και θα το εγκρίνει σύντομα.<br>Θα λάβεις SMS μόλις απαντήσει.</p>
+    </div>
+    <div class="section">
+      <div class="summary-card" id="doneSummary"></div>
+      <button class="btn full ghost" style="margin-top:14px" onclick="resetAll()">Νέα κράτηση</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- Sticky CTA -->
+<div class="cta-bar" id="cta" style="display:none">
+  <div class="inner">
+    <div class="summary">
+      <div class="title" id="ctaTitle">—</div>
+      <div class="sub" id="ctaSub">—</div>
+    </div>
+    <button class="btn" id="ctaBtn">Συνέχεια</button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDate = iso => iso.split('-').reverse().join('/');
+  const today = () => new Date().toISOString().slice(0,10);
+  const avatarClass = name => 'avatar c' + ((name||'X').charCodeAt(0) % 6 + 1);
+  const haptic = () => { try { navigator.vibrate?.(8); } catch(_) {} };
+  function toast(msg, type='') {
+    const t = document.createElement('div'); t.className='toast '+type; t.textContent=msg;
+    $('toasts').appendChild(t);
+    setTimeout(() => { t.classList.add('leaving'); setTimeout(() => t.remove(), 300); }, 2400);
+  }
+
+  const state = {
+    step: 'shops',
+    shop: null, barber: null, service: null, date: null, time: null,
+    services: [], slots: [], shopPrices: {},
+  };
+  const STEPS = ['shops','barbers','service','date','time','details','done'];
+  const STEP_NUM = { barbers: 1, service: 2, date: 3, time: 4, details: 5 };
+
+  function go(step) {
+    state.step = step;
+    STEPS.forEach(s => $('view-' + s).style.display = (s === step) ? 'block' : 'none');
+    $('backBtn').style.display = (step === 'shops' || step === 'done') ? 'none' : 'inline-flex';
+    $('progress').style.display = STEP_NUM[step] ? 'flex' : 'none';
+    if (STEP_NUM[step]) {
+      const n = STEP_NUM[step];
+      document.querySelectorAll('.progress .seg').forEach((s, i) => s.classList.toggle('done', i < n));
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    updateTopbar(); updateCTA();
+  }
+
+  function back() {
+    if (state.step === 'barbers') return go('shops');
+    if (state.step === 'service') return go('barbers');
+    if (state.step === 'date') return go('service');
+    if (state.step === 'time') return go('date');
+    if (state.step === 'details') return go('time');
+  }
+
+  function updateTopbar() {
+    const t = $('topbarTitle'), s = $('topbarSub');
+    const map = {
+      shops: ['Barberhub', ''],
+      barbers: [state.shop?.name || '', state.shop?.address || ''],
+      service: [state.barber?.name || '', state.shop?.name || ''],
+      date: [state.barber?.name || '', state.service?.label || ''],
+      time: [state.barber?.name || '', `${state.service?.label} · ${fmtDate(state.date)}`],
+      details: ['Στοιχεία', `${fmtDate(state.date)} · ${state.time}`],
+      done: ['', ''],
+    };
+    [t.textContent, s.textContent] = map[state.step] || ['', ''];
+  }
+
+  function updateCTA() {
+    const cta = $('cta'), title = $('ctaTitle'), sub = $('ctaSub'), btn = $('ctaBtn');
+    if (state.step === 'details' && validDetails()) {
+      cta.style.display = 'block';
+      title.textContent = `${fmtDate(state.date)} · ${state.time}`;
+      sub.textContent = `${state.barber.name} · ${state.service.label}`;
+      btn.textContent = 'Στείλε αίτημα';
+      btn.onclick = submit;
+    } else {
+      cta.style.display = 'none';
+    }
+  }
+
+  /* ========= Shops ========= */
+  async function loadShops() {
+    const params = new URLSearchParams(location.search);
+    const directShopSlug = params.get('shop');
+    const list = await fetch('/api/shops').then(r => r.json());
+    if (directShopSlug) {
+      const target = list.find(s => s.slug === directShopSlug);
+      if (target) return openShop(target);
+    }
+    if (list.length === 1) return openShop(list[0]);
+
+    $('shopsList').innerHTML = list.map(s => `
+      <div class="card-row" data-slug="${s.slug}">
+        <div class="${avatarClass(s.name)}">${escapeHtml(s.name.slice(0,1))}</div>
+        <div class="info">
+          <div class="name">${escapeHtml(s.name)}</div>
+          <div class="meta">${escapeHtml(s.address || '')}</div>
+        </div>
+        <div class="chev">›</div>
+      </div>`).join('');
+    $('shopsList').querySelectorAll('.card-row').forEach(el => el.onclick = () => {
+      haptic();
+      openShop(list.find(x => x.slug === el.dataset.slug));
+    });
+    go('shops');
+  }
+
+  async function openShop(shop) {
+    const data = await fetch('/api/shops/' + encodeURIComponent(shop.slug)).then(r => r.json());
+    state.shop = data.shop;
+    state.shopPrices = {}; for (const p of (data.prices || [])) state.shopPrices[p.haircut_type] = p.price_eur;
+    const barbers = data.barbers;
+    if (!barbers.length) {
+      $('barbersList').innerHTML = '<div class="empty"><div class="em">😴</div><p>Δεν υπάρχουν διαθέσιμοι κουρείς</p></div>';
+    } else {
+      $('barbersList').innerHTML = barbers.map(b => `
+        <div class="card-row" data-slug="${b.slug}">
+          <div class="${avatarClass(b.name)}">${escapeHtml(b.name.slice(0,1))}</div>
+          <div class="info">
+            <div class="name">${escapeHtml(b.name)}</div>
+            <div class="meta">${escapeHtml(b.bio || `${b.open_hour}:00 – ${b.close_hour}:00`)}</div>
+          </div>
+          <div class="chev">›</div>
+        </div>`).join('');
+      $('barbersList').querySelectorAll('.card-row').forEach(el => el.onclick = () => {
+        haptic();
+        openBarber(barbers.find(b => b.slug === el.dataset.slug));
+      });
+    }
+    go('barbers');
+  }
+
+  async function openBarber(barber) {
+    state.barber = barber;
+    state.service = null; state.date = today(); state.time = null;
+    const config = await fetch('/api/config').then(r => r.json());
+    state.services = config.haircutTypes;
+
+    $('services').innerHTML = state.services.map(s => {
+      const price = state.shopPrices[s.id];
+      return `<div class="tile" data-id="${s.id}">
+        <div class="body">
+          <div class="name">${escapeHtml(s.label)}</div>
+          <div class="meta">~${s.minutes} λεπτά</div>
+        </div>
+        ${price ? `<div class="price">€${price}</div>` : '<div class="chev">›</div>'}
+      </div>`;
+    }).join('');
+    $('services').querySelectorAll('.tile').forEach(el => el.onclick = () => {
+      haptic();
+      state.service = state.services.find(x => x.id === el.dataset.id);
+      go('date');
+      buildWeekStrip();
+    });
+
+    go('service');
+  }
+
+  /* ========= Date ========= */
+  function buildWeekStrip() {
+    const strip = $('weekStrip');
+    strip.innerHTML = '';
+    const days = ['Κυρ','Δευ','Τρι','Τετ','Πεμ','Παρ','Σαβ'];
+    const months = ['Ιαν','Φεβ','Μαρ','Απρ','Μαϊ','Ιουν','Ιουλ','Αυγ','Σεπ','Οκτ','Νοε','Δεκ'];
+    const start = new Date();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = d.toISOString().slice(0,10);
+      const el = document.createElement('div');
+      el.className = 'day';
+      if (iso === state.date) el.classList.add('selected');
+      el.dataset.date = iso;
+      el.innerHTML = `<div class="dow">${days[d.getDay()]}</div><div class="num">${d.getDate()}</div><div class="mon">${months[d.getMonth()]}</div>`;
+      el.onclick = () => {
+        haptic();
+        state.date = iso;
+        strip.querySelectorAll('.day').forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected');
+        // Auto-advance to time
+        setTimeout(() => { go('time'); loadSlots(); }, 180);
+      };
+      strip.appendChild(el);
+    }
+  }
+
+  /* ========= Time slots ========= */
+  async function loadSlots() {
+    $('timeSub').textContent = `${state.barber.name} · ${fmtDate(state.date)}`;
+    const grid = $('slotsGrid');
+    grid.innerHTML = Array.from({length: 12}).map(() => '<div class="skel" style="height:62px"></div>').join('');
+    const url = `/api/shops/${encodeURIComponent(state.shop.slug)}/barbers/${encodeURIComponent(state.barber.slug)}/availability?date=${state.date}`;
+    try {
+      const data = await fetch(url).then(r => r.json());
+      if (data.blockedDay) {
+        grid.innerHTML = '<div class="empty" style="grid-column: 1/-1"><div class="em">😴</div><p>Ο κουρέας έχει ρεπό τη μέρα αυτή.</p></div>';
+        return;
+      }
+      state.slots = data.slots || [];
+      renderSlots();
+    } catch (e) {
+      grid.innerHTML = '<p class="muted">Αδύνατη η φόρτωση.</p>';
+    }
+  }
+
+  function renderSlots() {
+    const grid = $('slotsGrid');
+    if (!state.slots.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column: 1/-1"><div class="em">😴</div><p>Καμία διαθέσιμη ώρα.</p></div>';
+      return;
+    }
+    grid.innerHTML = state.slots.map(s => {
+      const cls = s.past ? 'color-past' : `color-${s.color}`;
+      const meta = s.past ? '—' : s.color === 'red' ? 'γεμάτη' : (s.confirmed > 0 ? `${s.confirmed}/${s.capacity}` : '');
+      return `<div class="slot ${cls}" data-time="${s.time}" data-available="${s.available}">
+        <div>${s.time}</div>
+        ${meta ? `<div class="meta">${meta}</div>` : ''}
+      </div>`;
+    }).join('');
+    grid.querySelectorAll('.slot').forEach(el => {
+      if (el.dataset.available !== 'true') return;
+      el.onclick = () => {
+        haptic();
+        state.time = el.dataset.time;
+        // Auto-advance to details
+        setTimeout(() => goDetails(), 150);
+      };
+    });
+  }
+
+  /* ========= Details ========= */
+  function goDetails() {
+    const price = state.shopPrices[state.service.id];
+    $('detailsSummary').innerHTML = `
+      <div class="summary-row"><span class="k">Κουρέας</span><span class="v">${escapeHtml(state.barber.name)}</span></div>
+      <div class="summary-row"><span class="k">Υπηρεσία</span><span class="v">${escapeHtml(state.service.label)}${price ? ' · €' + price : ''}</span></div>
+      <div class="summary-row"><span class="k">Ημερομηνία</span><span class="v">${fmtDate(state.date)}</span></div>
+      <div class="summary-row"><span class="k">Ώρα</span><span class="v">${state.time}</span></div>`;
+    go('details');
+  }
+  function validDetails() { return $('name').value.trim() && $('phone').value.trim(); }
+  ['name','phone','email','notes'].forEach(id => $(id)?.addEventListener('input', updateCTA));
+
+  async function submit() {
+    const btn = $('ctaBtn');
+    btn.disabled = true; const oldText = btn.textContent;
+    btn.textContent = 'Αποστολή…';
+    try {
+      const body = {
+        name: $('name').value.trim(), phone: $('phone').value.trim(),
+        email: $('email').value.trim(), haircutType: state.service.id,
+        date: state.date, time: state.time, notes: $('notes').value.trim(),
+      };
+      const url = `/api/shops/${encodeURIComponent(state.shop.slug)}/barbers/${encodeURIComponent(state.barber.slug)}/appointments`;
+      const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Σφάλμα');
+      haptic();
+      showDone();
+    } catch (e) {
+      $('alert').className = 'alert error'; $('alert').style.display = 'block'; $('alert').textContent = e.message;
+      btn.disabled = false; btn.textContent = oldText;
+      toast(e.message, 'error');
+    }
+  }
+  function showDone() {
+    const price = state.shopPrices[state.service.id];
+    $('doneSummary').innerHTML = `
+      <div class="summary-row"><span class="k">Κουρέας</span><span class="v">${escapeHtml(state.barber.name)}</span></div>
+      <div class="summary-row"><span class="k">Υπηρεσία</span><span class="v">${escapeHtml(state.service.label)}${price ? ' · €' + price : ''}</span></div>
+      <div class="summary-row"><span class="k">Ημερομηνία</span><span class="v">${fmtDate(state.date)}</span></div>
+      <div class="summary-row"><span class="k">Ώρα</span><span class="v">${state.time}</span></div>`;
+    go('done');
+  }
+
+  function resetAll() {
+    state.barber = null; state.service = null; state.date = null; state.time = null;
+    ['name','phone','email','notes'].forEach(id => { $(id).value = ''; });
+    loadShops();
+  }
+
+  window.addEventListener('scroll', () => $('topbar').classList.toggle('scrolled', window.scrollY > 4));
+  $('backBtn').onclick = () => { haptic(); back(); };
+  loadShops();
+</script>
+</body>
+</html>

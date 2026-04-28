@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Εγγραφή κουρείου · Barberhub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <div class="title">Δημιούργησε το κουρείο σου</div>
+        <div class="title-sub">Σε 60 δευτερόλεπτα</div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Form -->
+    <section id="view-form" class="view">
+      <div class="hero">
+        <h1>Στήσε το κουρείο σου.</h1>
+        <p>Λίγα στοιχεία και είσαι έτοιμος να δέχεσαι ραντεβού.</p>
+      </div>
+      <div class="section">
+        <div class="card">
+          <h3 style="margin-top:6px">1. Κατάστημα</h3>
+          <div class="field">
+            <label>Όνομα κουρείου</label>
+            <input id="shop_name" class="input" type="text" placeholder="π.χ. Medusa Barber" />
+          </div>
+          <div class="field">
+            <label>URL slug (μόνο πεζά γράμματα/αριθμοί/-)</label>
+            <input id="shop_slug" class="input" type="text" placeholder="medusa-barber" />
+            <span class="muted small">Θα γίνει: <span id="urlPreview" style="font-family:monospace">…/?shop=…</span></span>
+          </div>
+          <div class="field">
+            <label>Διεύθυνση <span class="muted">(προαιρετικό)</span></label>
+            <input id="address" class="input" type="text" placeholder="π.χ. Ερμού 10, Θεσσαλονίκη" />
+          </div>
+          <div class="field">
+            <label>Τηλέφωνο επικοινωνίας <span class="muted">(προαιρετικό)</span></label>
+            <input id="phone" class="input" type="tel" placeholder="2310 123456" />
+          </div>
+
+          <h3>2. Πρώτος κουρέας</h3>
+          <div class="field">
+            <label>Όνομα κουρέα</label>
+            <input id="barber_name" class="input" type="text" placeholder="π.χ. Νίκος" />
+            <span class="muted small">Μπορείς να προσθέσεις κι άλλους αργότερα από το admin.</span>
+          </div>
+
+          <h3>3. Κωδικός διαχείρισης</h3>
+          <div class="field">
+            <label>Κωδικός (8+ χαρακτήρες — ισχυρός κωδικός)</label>
+            <input id="password" class="input" type="password" placeholder="τουλάχιστον 8 χαρακτήρες" autocomplete="new-password" />
+            <span class="muted small" style="padding-left: 4px">Συνιστάται: γράμματα + αριθμοί + σύμβολα. Δεν θα τον δούμε.</span>
+          </div>
+
+          <div id="alert" class="alert error" style="display:none; margin-bottom:10px"></div>
+          <button class="btn full" id="signupBtn">Δημιουργία κουρείου</button>
+          <p class="small muted center" style="margin-top:14px">
+            Πατώντας Δημιουργία, αποδέχεσαι ότι θα διαχειριστείς τα στοιχεία πελατών σου με ευθύνη σου.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: Success + Onboarding -->
+    <section id="view-success" class="view" style="display:none">
+      <div class="hero" style="text-align:center; padding-top: 40px">
+        <div style="font-size:64px">✂️</div>
+        <h1>Καλώς ήρθες!</h1>
+        <p>Το κουρείο σου είναι έτοιμο. Ακολούθησε τα 3 βήματα παρακάτω.</p>
+      </div>
+      <div class="section">
+        <div class="card" style="margin-bottom:14px">
+          <h3 style="margin-top:6px">📲 Βήμα 1 · Άνοιξε το admin στο κινητό σου</h3>
+          <div class="field">
+            <label>Admin URL</label>
+            <input id="admin_url" class="input" type="text" readonly />
+          </div>
+          <button class="btn full" id="openAdminBtn">Άνοιξε admin</button>
+          <p class="small muted" style="margin-top:8px">
+            <strong>iPhone Safari</strong>: Κοινοποίηση ⤴ → Προσθήκη στην οθόνη Αφετηρίας<br>
+            <strong>Android Chrome</strong>: μενού ⋮ → Εγκατάσταση εφαρμογής
+          </p>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <h3 style="margin-top:6px">🖨 Βήμα 2 · Εκτύπωσε το QR</h3>
+          <div class="qr-wrap">
+            <img id="qr_img" alt="QR" />
+            <div class="url" id="booking_url">…</div>
+          </div>
+          <button class="btn full ghost" id="openQRBtn">Άνοιξε για εκτύπωση</button>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <h3 style="margin-top:6px">🌐 Βήμα 3 · Σύνδεσε με Google Maps</h3>
+          <p class="small">Το κουμπί <strong>"Κάντε κράτηση"</strong> στο Google Maps σου θα ανοίγει αυτό το URL:</p>
+          <div class="field">
+            <input id="booking_url_2" class="input" type="text" readonly />
+          </div>
+          <button class="btn small ghost full" id="copyUrlBtn" style="margin-bottom:10px">📋 Αντιγραφή</button>
+
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer; font-weight:700; padding:8px 0">📖 Οδηγίες (5 βήματα)</summary>
+            <ol class="small" style="line-height:1.6; padding-left: 20px; color: var(--ink-2)">
+              <li>Πήγαινε στο <a href="https://business.google.com" target="_blank" style="color: var(--accent)">business.google.com</a> και συνδέσου</li>
+              <li>Επίλεξε το κουρείο σου</li>
+              <li>Πάτα <strong>Επεξεργασία προφίλ</strong> → <strong>Πληροφορίες επιχείρησης</strong></li>
+              <li>Στη λίστα <strong>"Σύνδεσμοι"</strong>, πάτα <strong>"+"</strong> δίπλα στο <strong>"Σύνδεσμος για κρατήσεις"</strong> και επικόλλησε το URL που αντέγραψες</li>
+              <li>Πάτα <strong>Αποθήκευση</strong>. Σε 1-24 ώρες θα εμφανιστεί το κουμπί <strong>"Κάντε κράτηση"</strong> στο Google Maps του κουρείου σου.</li>
+            </ol>
+          </details>
+
+          <button class="btn full" id="openGBPBtn" style="margin-top:10px">Άνοιξε Google Business Profile</button>
+        </div>
+
+        <div class="alert info" style="margin-top:14px">
+          📩 Για να φτάνουν πραγματικά SMS και email στους πελάτες, ο διαχειριστής του server πρέπει να ρυθμίσει Twilio + Gmail SMTP. Δες το <code>CHECKLIST.md</code>.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const slugify = s => String(s||'').toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+
+    $('shop_name').addEventListener('input', () => {
+      if (!$('shop_slug').value) $('shop_slug').value = slugify($('shop_name').value);
+      updatePreview();
+    });
+    $('shop_slug').addEventListener('input', updatePreview);
+    function updatePreview() {
+      const slug = slugify($('shop_slug').value);
+      $('shop_slug').value = slug;
+      $('urlPreview').textContent = `${location.origin}/?shop=${slug || '...'}`;
+    }
+
+    $('signupBtn').onclick = async () => {
+      const body = {
+        shop_name: $('shop_name').value.trim(),
+        shop_slug: $('shop_slug').value.trim(),
+        address: $('address').value.trim(),
+        phone: $('phone').value.trim(),
+        barber_name: $('barber_name').value.trim(),
+        password: $('password').value,
+      };
+      const a = $('alert');
+      a.style.display = 'none';
+      try {
+        const r = await fetch('/api/signup', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(body)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Σφάλμα');
+        showSuccess(data);
+      } catch (e) {
+        a.style.display = 'block'; a.textContent = e.message;
+      }
+    };
+
+    function showSuccess(d) {
+      $('view-form').style.display = 'none';
+      $('view-success').style.display = 'block';
+      $('admin_url').value = d.admin_url;
+      $('booking_url').textContent = d.booking_url;
+      $('booking_url_2').value = d.booking_url;
+      $('qr_img').src = `/api/qr.png?url=${encodeURIComponent(d.booking_url)}`;
+      $('openAdminBtn').onclick = () => location.href = d.admin_url;
+      $('openQRBtn').onclick = () => window.open(d.qr_url, '_blank');
+      $('openGBPBtn').onclick = () => window.open('https://business.google.com', '_blank');
+      $('copyUrlBtn').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(d.booking_url);
+          $('copyUrlBtn').textContent = '✓ Αντιγράφηκε!';
+          setTimeout(() => $('copyUrlBtn').textContent = '📋 Αντιγραφή', 2000);
+        } catch (e) { alert(d.booking_url); }
+      };
+    }
+  </script>
+</body>
+</html>

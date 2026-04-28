@@ -1,0 +1,62 @@
+services:
+  - type: web
+    name: barberhub
+    runtime: node
+    plan: free               # ΔΩΡΕΑΝ — κοιμάται μετά από 15' αδράνειας (πρώτο load: ~30s). Setup keep-alive cron για να μη συμβαίνει.
+    region: frankfurt        # κοντά στην Ελλάδα
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: PORT
+        value: "10000"
+      - key: APP_NAME
+        value: Barberhub
+      - key: DB_PATH
+        value: /data/barbershop.db
+      - key: LOG_PII
+        value: "false"
+      - key: OPEN_HOUR
+        value: "09"
+      - key: CLOSE_HOUR
+        value: "20"
+      - key: SLOT_MINUTES
+        value: "30"
+      # Auto-generate κρυπτογραφικά secure secret on first deploy
+      - key: JWT_SECRET
+        generateValue: true
+      # Συμπλήρωσέ τα στο Render dashboard (sync: false = δεν ανεβαίνει στο git)
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
