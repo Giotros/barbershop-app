@@ -8,8 +8,9 @@ if (!process.env.JWT_SECRET) {
   console.warn('[auth] JWT_SECRET δεν είναι set - χρησιμοποιώ random. Σε production βάλτε σταθερό στο .env για να μη γίνονται invalidate τα sessions σε restart.');
 }
 
-const SUPER_ADMIN_PWD_HASH = process.env.SUPER_ADMIN_PASSWORD_HASH || null;
-const SUPER_ADMIN_PWD = process.env.SUPER_ADMIN_PASSWORD || null;
+// Creator (marketplace owner) password — υποστηρίζονται και τα δύο ονόματα μεταβλητών
+const SUPER_ADMIN_PWD_HASH = process.env.CREATOR_PASSWORD_HASH || process.env.SUPER_ADMIN_PASSWORD_HASH || null;
+const SUPER_ADMIN_PWD = process.env.CREATOR_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || null;
 
 function hashPassword(password) {
   return bcrypt.hashSync(String(password), 12);

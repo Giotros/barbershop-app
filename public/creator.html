@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Creator · Barberhub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <style>
+    .shop-row {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 16px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--r-md); margin-bottom: 8px;
+      cursor: pointer; transition: all var(--t-fast);
+    }
+    .shop-row:hover { border-color: var(--line-2); background: var(--bg-2); }
+    .shop-row .top { display: flex; align-items: center; gap: 12px; }
+    .shop-row .name { font-weight: 700; font-size: 16px; flex: 1; }
+    .shop-row .meta { display: flex; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .shop-row .meta .item { display: inline-flex; align-items: center; gap: 4px; }
+    .sub-status { padding: 3px 8px; border-radius: var(--r-pill); font-size: 11px; font-weight: 700; }
+    .sub-status.active { background: var(--green-soft); color: var(--green); }
+    .sub-status.trial { background: var(--blue-soft); color: var(--blue); }
+    .sub-status.inactive { background: var(--red-soft); color: var(--red); }
+    .url-mono { font-family: 'SF Mono', monospace; font-size: 11px; color: var(--muted); word-break: break-all; }
+    .copy-btn {
+      display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;
+      background: var(--surface-3); border-radius: 6px; border: 0;
+      font-size: 11px; font-weight: 600; cursor: pointer; color: var(--ink-2);
+    }
+    .copy-btn:hover { background: var(--line); }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="app no-nav" id="view-login">
+  <div class="hero" style="text-align:center; padding-top: 80px;">
+    <div style="font-size:54px; margin-bottom:8px">👑</div>
+    <h1>Creator</h1>
+    <p>Marketplace διαχείριση</p>
+  </div>
+  <div class="section">
+    <div class="card elevated">
+      <div class="field">
+        <label>Creator κωδικός</label>
+        <input id="pwd" class="input" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <button class="btn full" id="loginBtn">Σύνδεση</button>
+      <div id="loginErr" class="alert error" style="display:none; margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="app" id="view-main" style="display:none">
+  <div class="topbar" id="topbar">
+    <div class="title-block">
+      <div class="title">Creator dashboard</div>
+      <div class="title-sub" id="topbarSub">—</div>
+    </div>
+    <button class="icon-btn" id="refreshBtn" title="Ανανέωση">↻</button>
+    <button class="icon-btn" id="logoutBtn" title="Αποσύνδεση">⏻</button>
+  </div>
+
+  <div class="section">
+    <h2>Επισκόπηση</h2>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat accent">
+        <div class="label">Ενεργά κουρεία</div>
+        <div class="value" id="statActive">—</div>
+        <div class="delta" id="statShops">—</div>
+      </div>
+      <div class="stat">
+        <div class="label">Κουρείς</div>
+        <div class="value" id="statBarbers">—</div>
+        <div class="delta">συνολικά</div>
+      </div>
+      <div class="stat">
+        <div class="label">Έσοδα/μήνα</div>
+        <div class="value" id="statRevenue">—</div>
+        <div class="delta">subscription</div>
+      </div>
+    </div>
+
+    <!-- Shops list -->
+    <div class="flex" style="margin: 22px 4px 12px; gap: 8px">
+      <h3 style="margin: 0; flex: 1;">Κουρεία</h3>
+      <button class="btn small" id="newShopBtn">+ Νέο κουρείο</button>
+    </div>
+    <div id="shopsList"></div>
+  </div>
+</div>
+
+<!-- ============ SHEETS ============ -->
+<div class="sheet-bg" id="newShopSheet"><div class="sheet">
+  <div class="handle"></div>
+  <button class="sheet-close" onclick="closeSheet('newShopSheet')">✕</button>
+  <h3>Νέο κουρείο</h3>
+  <div class="field"><label>Όνομα κουρείου</label><input id="ns_name" class="input" type="text" placeholder="π.χ. Passalis Barbershop"></div>
+  <div class="field"><label>URL slug <span class="muted small">(αυτόματο)</span></label><input id="ns_slug" class="input" type="text" placeholder="passalis-barbershop"></div>
+  <div class="row">
+    <div class="field" style="margin:0"><label>Διεύθυνση</label><input id="ns_address" class="input" type="text"></div>
+    <div class="field" style="margin:0"><label>Τηλέφωνο</label><input id="ns_phone" class="input" type="tel"></div>
+  </div>
+  <div class="field"><label>Email επαφής <span class="muted">(για billing)</span></label><input id="ns_email" class="input" type="email"></div>
+  <hr class="sep" />
+  <h4>Πρώτος κουρέας</h4>
+  <div class="field"><label>Όνομα κουρέα</label><input id="ns_barber" class="input" type="text" placeholder="π.χ. Γιώργος"></div>
+  <hr class="sep" />
+  <h4>Subscription</h4>
+  <div class="row">
+    <div class="field" style="margin:0">
+      <label>Status</label>
+      <select id="ns_status" class="input">
+        <option value="trial">Trial (δωρεάν δοκιμή)</option>
+        <option value="active">Active (πληρώνει)</option>
+        <option value="inactive">Inactive (δεν χρησιμοποιεί)</option>
+      </select>
+    </div>
+    <div class="field" style="margin:0">
+      <label>€/κουρέα/μήνα</label>
+      <input id="ns_fee" class="input" type="number" min="0" max="100" value="10">
+    </div>
+  </div>
+  <hr class="sep" />
+  <h4>Κωδικός κουρείου</h4>
+  <div class="field">
+    <label>Κωδικός που θα δώσεις στον κουρέα <span class="muted">(8+ χαρακτήρες)</span></label>
+    <input id="ns_password" class="input" type="text" placeholder="ισχυρός κωδικός">
+    <button class="copy-btn" id="genPwdBtn" style="margin-top: 6px; align-self: flex-start">🎲 Δημιουργία τυχαίου</button>
+  </div>
+  <div id="ns_alert" class="alert" style="display:none; margin: 10px 0"></div>
+  <div class="row">
+    <button class="btn full success" id="ns_saveBtn">Δημιουργία</button>
+    <button class="btn full ghost" onclick="closeSheet('newShopSheet')">Άκυρο</button>
+  </div>
+</div></div>
+
+<!-- Shop details sheet -->
+<div class="sheet-bg" id="shopSheet"><div class="sheet">
+  <div class="handle"></div>
+  <button class="sheet-close" onclick="closeSheet('shopSheet')">✕</button>
+  <h3 id="ss_title">—</h3>
+  <input type="hidden" id="ss_id" />
+
+  <h4>📊 Στατιστικά</h4>
+  <div id="ss_stats" class="card" style="margin-bottom: 16px"></div>
+
+  <h4>🔗 Links</h4>
+  <div id="ss_links" class="card" style="margin-bottom: 16px"></div>
+
+  <h4>👥 Κουρείς</h4>
+  <div id="ss_barbers" style="margin-bottom: 8px"></div>
+  <button class="btn ghost full small" id="ss_addBarberBtn">+ Νέος κουρέας</button>
+
+  <hr class="sep" />
+
+  <h4>🏪 Στοιχεία κουρείου</h4>
+  <div class="field"><label>Όνομα</label><input id="ss_name" class="input" type="text"></div>
+  <div class="field"><label>Slug</label><input id="ss_slug" class="input" type="text"></div>
+  <div class="row">
+    <div class="field" style="margin:0"><label>Διεύθυνση</label><input id="ss_address" class="input" type="text"></div>
+    <div class="field" style="margin:0"><label>Τηλέφωνο</label><input id="ss_phone" class="input" type="tel"></div>
+  </div>
+  <div class="field"><label>Email επαφής</label><input id="ss_contactEmail" class="input" type="email"></div>
+
+  <h4>💳 Subscription</h4>
+  <div class="row">
+    <div class="field" style="margin:0">
+      <label>Status</label>
+      <select id="ss_status" class="input">
+        <option value="trial">Trial</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+    <div class="field" style="margin:0">
+      <label>€/κουρέα</label>
+      <input id="ss_fee" class="input" type="number" min="0" max="100">
+    </div>
+    <div class="field" style="margin:0">
+      <label>Λήξη συνδρομής</label>
+      <input id="ss_periodEnd" class="input" type="date">
+    </div>
+  </div>
+  <div class="field">
+    <label>Σημειώσεις billing</label>
+    <textarea id="ss_billingNotes" class="textarea" placeholder="π.χ. πληρώνει με μετρητά, IBAN..."></textarea>
+  </div>
+  <label class="chip" style="margin-bottom: 12px"><input type="checkbox" id="ss_active"> Ενεργό κουρείο</label>
+
+  <h4>🔐 Επαναφορά κωδικού</h4>
+  <div class="field">
+    <input id="ss_newPwd" class="input" type="text" placeholder="νέος κωδικός 8+ χαρακτήρες">
+    <button class="copy-btn" id="ss_resetPwdBtn" style="margin-top: 6px; align-self: flex-start">Επαναφορά κωδικού</button>
+  </div>
+
+  <div id="ss_alert" class="alert" style="display:none; margin: 10px 0"></div>
+
+  <div class="row">
+    <button class="btn full success" id="ss_saveBtn">Αποθήκευση</button>
+    <button class="btn full ghost" onclick="closeSheet('shopSheet')">Κλείσιμο</button>
+  </div>
+  <button class="btn full danger" id="ss_deleteBtn" style="margin-top: 14px">🗑 Διαγραφή κουρείου</button>
+</div></div>
+
+<!-- New barber sheet -->
+<div class="sheet-bg" id="newBarberSheet"><div class="sheet">
+  <div class="handle"></div>
+  <button class="sheet-close" onclick="closeSheet('newBarberSheet')">✕</button>
+  <h3>Νέος κουρέας</h3>
+  <input type="hidden" id="nb_shopId" />
+  <div class="field"><label>Όνομα</label><input id="nb_name" class="input" type="text" placeholder="π.χ. Γιώργος"></div>
+  <div class="field"><label>Slug (URL)</label><input id="nb_slug" class="input" type="text" placeholder="giorgos"></div>
+  <div class="row">
+    <div class="field" style="margin:0"><label>Λεπτά/κούρεμα</label><input id="nb_avg" class="input" type="number" min="5" max="120" value="30"></div>
+    <div class="field" style="margin:0"><label>Άνοιγμα</label><input id="nb_open" class="input" type="number" min="0" max="23" value="9"></div>
+    <div class="field" style="margin:0"><label>Κλείσιμο</label><input id="nb_close" class="input" type="number" min="1" max="24" value="20"></div>
+  </div>
+  <div id="nb_alert" class="alert" style="display:none; margin: 10px 0"></div>
+  <div class="row">
+    <button class="btn full success" id="nb_saveBtn">Προσθήκη</button>
+    <button class="btn full ghost" onclick="closeSheet('newBarberSheet')">Άκυρο</button>
+  </div>
+</div></div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slugify = s => String(s||'').toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+function toast(msg, type='') {
+  const t = document.createElement('div'); t.className='toast '+type; t.textContent=msg;
+  $('toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('leaving'); setTimeout(() => t.remove(), 300); }, 2400);
+}
+function genPassword() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%';
+  return Array.from({length: 12}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Αντιγράφηκε ✓', 'success')).catch(() => {});
+}
+function closeSheet(id) { $(id).classList.remove('show'); }
+
+async function api(method, url, body) {
+  const opts = { method, credentials: 'include', headers: {} };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const r = await fetch(url, opts);
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401) { location.reload(); return; }
+  if (!r.ok) throw new Error(data.error || 'Σφάλμα');
+  return data;
+}
+
+/* ====== Login ====== */
+$('loginBtn').onclick = async () => {
+  const password = $('pwd').value;
+  $('loginBtn').disabled = true;
+  try {
+    const r = await fetch('/api/admin/login', {
+      method:'POST', headers: {'Content-Type':'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({ password })
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || 'Λάθος κωδικός');
+    }
+    showMain();
+  } catch (e) {
+    $('loginErr').style.display = 'block'; $('loginErr').textContent = e.message;
+    $('loginBtn').disabled = false;
+  }
+};
+$('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+$('logoutBtn').onclick = async () => {
+  await fetch('/api/admin/logout', { method:'POST', credentials: 'include' });
+  location.reload();
+};
+$('refreshBtn').onclick = () => loadDashboard();
+
+/* ====== Init ====== */
+(async () => {
+  try {
+    const r = await fetch('/api/admin/me', { credentials: 'include' });
+    if (r.ok) { showMain(); }
+  } catch (_) {}
+})();
+
+function showMain() {
+  $('view-login').style.display = 'none';
+  $('view-main').style.display = 'block';
+  loadDashboard();
+}
+
+/* ====== Dashboard ====== */
+let dashboard = null;
+async function loadDashboard() {
+  try {
+    dashboard = await api('GET', '/api/creator/summary');
+    renderStats();
+    renderShops();
+    $('topbarSub').textContent = `${dashboard.totals.shops} κουρεία · ${dashboard.totals.barbers} κουρείς`;
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function renderStats() {
+  const t = dashboard.totals;
+  $('statActive').textContent = t.activeShops;
+  $('statShops').textContent = `${t.shops} συνολικά`;
+  $('statBarbers').textContent = t.barbers;
+  $('statRevenue').textContent = '€' + t.monthlyRevenue;
+}
+
+function fmtSubStatus(s) {
+  const m = { active: 'Active', trial: 'Trial', inactive: 'Inactive' };
+  return `<span class="sub-status ${s}">${m[s] || s}</span>`;
+}
+
+function renderShops() {
+  const c = $('shopsList');
+  if (!dashboard.shops.length) {
+    c.innerHTML = '<div class="empty"><div class="em">📭</div><p>Δεν υπάρχουν κουρεία ακόμα</p><p class="small">Πάτα + Νέο κουρείο για να ξεκινήσεις</p></div>';
+    return;
+  }
+  c.innerHTML = dashboard.shops.map(s => `
+    <div class="shop-row" data-id="${s.id}">
+      <div class="top">
+        <div class="name">${escapeHtml(s.name)}</div>
+        ${fmtSubStatus(s.subscription_status)}
+        ${!s.is_active ? '<span class="sub-status inactive">Ανενεργό</span>' : ''}
+      </div>
+      <div class="meta">
+        <span class="item">👥 ${s.stats.activeBarbers} κουρείς</span>
+        <span class="item">📅 ${s.stats.upcomingAppts} επερχόμενα</span>
+        <span class="item">💶 €${s.stats.activeBarbers * (s.monthly_per_barber_eur || 0)}/μήνα</span>
+      </div>
+      <div class="url-mono">${escapeHtml(s.booking_url)}</div>
+    </div>
+  `).join('');
+  c.querySelectorAll('.shop-row').forEach(el => el.onclick = () => openShopSheet(Number(el.dataset.id)));
+}
+
+/* ====== New shop ====== */
+$('newShopBtn').onclick = () => {
+  ['ns_name','ns_slug','ns_address','ns_phone','ns_email','ns_barber','ns_password'].forEach(id => $(id).value = '');
+  $('ns_status').value = 'trial';
+  $('ns_fee').value = 10;
+  $('ns_alert').style.display = 'none';
+  $('newShopSheet').classList.add('show');
+};
+$('ns_name').addEventListener('input', () => {
+  if (!$('ns_slug').value) $('ns_slug').value = slugify($('ns_name').value);
+});
+$('genPwdBtn').onclick = () => {
+  const p = genPassword();
+  $('ns_password').value = p;
+  copyToClipboard(p);
+};
+$('ns_saveBtn').onclick = async () => {
+  const body = {
+    name: $('ns_name').value.trim(),
+    slug: $('ns_slug').value.trim(),
+    address: $('ns_address').value.trim(),
+    phone: $('ns_phone').value.trim(),
+    contact_email: $('ns_email').value.trim(),
+    barber_name: $('ns_barber').value.trim(),
+    password: $('ns_password').value,
+    subscription_status: $('ns_status').value,
+    monthly_per_barber_eur: Number($('ns_fee').value) || 10,
+  };
+  try {
+    const r = await api('POST', '/api/creator/shops', body);
+    toast(`Δημιουργήθηκε: ${body.name} ✓`, 'success');
+    closeSheet('newShopSheet');
+    loadDashboard();
+    setTimeout(() => openShopSheet(r.id), 300);
+  } catch (e) {
+    $('ns_alert').className='alert error'; $('ns_alert').style.display='block'; $('ns_alert').textContent = e.message;
+  }
+};
+
+/* ====== Shop details ====== */
+let currentShop = null;
+async function openShopSheet(id) {
+  const s = dashboard.shops.find(x => x.id === id);
+  if (!s) return;
+  currentShop = s;
+  $('ss_id').value = s.id;
+  $('ss_title').textContent = s.name;
+  $('ss_name').value = s.name;
+  $('ss_slug').value = s.slug;
+  $('ss_address').value = s.address || '';
+  $('ss_phone').value = s.phone || '';
+  $('ss_contactEmail').value = s.contact_email || '';
+  $('ss_status').value = s.subscription_status || 'trial';
+  $('ss_fee').value = s.monthly_per_barber_eur || 10;
+  $('ss_periodEnd').value = s.subscription_period_end || '';
+  $('ss_billingNotes').value = s.billing_notes || '';
+  $('ss_active').checked = !!s.is_active;
+  $('ss_newPwd').value = '';
+  $('ss_alert').style.display = 'none';
+
+  // Stats
+  const st = s.stats;
+  $('ss_stats').innerHTML = `
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div><div class="muted small">Ενεργοί κουρείς</div><div style="font-weight:800; font-size:18px">${st.activeBarbers}</div></div>
+      <div><div class="muted small">Σύνολο κουρέων</div><div style="font-weight:800; font-size:18px">${st.totalBarbers}</div></div>
+      <div><div class="muted small">Επερχόμενα ραντεβού</div><div style="font-weight:800; font-size:18px">${st.upcomingAppts}</div></div>
+      <div><div class="muted small">Σύνολο ραντεβού</div><div style="font-weight:800; font-size:18px">${st.allTimeAppts}</div></div>
+    </div>
+    <hr class="sep" />
+    <div class="muted small">Μηνιαία χρέωση</div>
+    <div style="font-weight:800; font-size:24px">€${st.activeBarbers * (s.monthly_per_barber_eur || 0)}</div>
+    <div class="muted tiny">${st.activeBarbers} κουρείς × €${s.monthly_per_barber_eur || 0}</div>
+  `;
+
+  // Links
+  $('ss_links').innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div>
+        <div class="muted small">📅 Booking URL (για QR στο μαγαζί)</div>
+        <div class="flex" style="gap:6px">
+          <div class="url-mono" style="flex:1">${escapeHtml(s.booking_url)}</div>
+          <button class="copy-btn" onclick="copyToClipboard('${s.booking_url}')">📋</button>
+        </div>
+      </div>
+      <div>
+        <div class="muted small">🔐 Admin URL (για τον κουρέα)</div>
+        <div class="flex" style="gap:6px">
+          <div class="url-mono" style="flex:1">${escapeHtml(s.admin_url)}</div>
+          <button class="copy-btn" onclick="copyToClipboard('${s.admin_url}')">📋</button>
+        </div>
+      </div>
+      <div>
+        <div class="muted small">🖨 QR εκτύπωσης</div>
+        <div class="flex" style="gap:6px">
+          <div class="url-mono" style="flex:1">${escapeHtml(s.qr_url)}</div>
+          <button class="copy-btn" onclick="window.open('${s.qr_url}','_blank')">Άνοιγμα</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Barbers
+  await loadShopBarbers(s.id);
+  $('shopSheet').classList.add('show');
+}
+
+async function loadShopBarbers(shopId) {
+  try {
+    const list = await api('GET', `/api/creator/shops/${shopId}/barbers`);
+    const c = $('ss_barbers');
+    if (!list.length) { c.innerHTML = '<p class="muted small center" style="padding:10px 0">Κανένας κουρέας</p>'; return; }
+    c.innerHTML = list.map(b => `
+      <div class="card-row" style="padding: 10px 12px; margin-bottom: 6px">
+        <div class="info">
+          <div class="name">${escapeHtml(b.name)} ${b.active ? '' : '<span class="muted small">(ανενεργός)</span>'}</div>
+          <div class="meta">${b.open_hour}:00–${b.close_hour}:00 · ${b.avg_minutes || 30}'/κούρεμα</div>
+        </div>
+        <button class="btn icon small ghost" data-id="${b.id}" data-act="del-barber" title="Διαγραφή">🗑</button>
+      </div>
+    `).join('');
+    c.querySelectorAll('button[data-act="del-barber"]').forEach(el => el.onclick = async () => {
+      if (!confirm(`Διαγραφή κουρέα; Διαγράφονται και τα ραντεβού του.`)) return;
+      try { await api('DELETE', `/api/creator/barbers/${el.dataset.id}`); loadShopBarbers(shopId); loadDashboard(); }
+      catch (e) { toast(e.message, 'error'); }
+    });
+  } catch (e) {}
+}
+
+$('ss_addBarberBtn').onclick = () => {
+  $('nb_shopId').value = currentShop.id;
+  ['nb_name','nb_slug'].forEach(id => $(id).value = '');
+  $('nb_avg').value = 30; $('nb_open').value = 9; $('nb_close').value = 20;
+  $('nb_alert').style.display = 'none';
+  $('newBarberSheet').classList.add('show');
+};
+$('nb_name').addEventListener('input', () => { if (!$('nb_slug').value) $('nb_slug').value = slugify($('nb_name').value); });
+$('nb_saveBtn').onclick = async () => {
+  const shopId = $('nb_shopId').value;
+  const body = {
+    name: $('nb_name').value.trim(),
+    slug: $('nb_slug').value.trim(),
+    avg_minutes: Number($('nb_avg').value) || 30,
+    default_capacity: Math.max(1, Math.round(60 / (Number($('nb_avg').value) || 30))),
+    open_hour: Number($('nb_open').value),
+    close_hour: Number($('nb_close').value),
+  };
+  try {
+    await api('POST', `/api/creator/shops/${shopId}/barbers`, body);
+    toast('Προστέθηκε ✓', 'success');
+    closeSheet('newBarberSheet');
+    loadShopBarbers(shopId);
+    loadDashboard();
+  } catch (e) {
+    $('nb_alert').className='alert error'; $('nb_alert').style.display='block'; $('nb_alert').textContent = e.message;
+  }
+};
+
+$('ss_saveBtn').onclick = async () => {
+  const id = currentShop.id;
+  const body = {
+    name: $('ss_name').value.trim(),
+    slug: $('ss_slug').value.trim(),
+    address: $('ss_address').value.trim(),
+    phone: $('ss_phone').value.trim(),
+    contact_email: $('ss_contactEmail').value.trim(),
+    subscription_status: $('ss_status').value,
+    monthly_per_barber_eur: Number($('ss_fee').value),
+    subscription_period_end: $('ss_periodEnd').value,
+    billing_notes: $('ss_billingNotes').value.trim(),
+    is_active: $('ss_active').checked,
+  };
+  try {
+    await api('PATCH', `/api/creator/shops/${id}`, body);
+    toast('Αποθηκεύτηκε ✓', 'success');
+    closeSheet('shopSheet');
+    loadDashboard();
+  } catch (e) {
+    $('ss_alert').className='alert error'; $('ss_alert').style.display='block'; $('ss_alert').textContent = e.message;
+  }
+};
+
+$('ss_resetPwdBtn').onclick = async () => {
+  const newPwd = $('ss_newPwd').value;
+  if (!newPwd || newPwd.length < 8) { toast('Κωδικός 8+ χαρακτήρες', 'error'); return; }
+  if (!confirm(`Επαναφορά κωδικού για ${currentShop.name};`)) return;
+  try {
+    await api('POST', `/api/creator/shops/${currentShop.id}/reset-password`, { password: newPwd });
+    copyToClipboard(newPwd);
+    toast('Κωδικός άλλαξε & αντιγράφηκε ✓', 'success');
+    $('ss_newPwd').value = '';
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+$('ss_deleteBtn').onclick = async () => {
+  if (!confirm(`ΟΡΙΣΤΙΚΗ διαγραφή του ${currentShop.name}; Όλα τα ραντεβού και τα δεδομένα θα χαθούν.`)) return;
+  if (!confirm(`Σίγουρα; Δεν επιστρέφει.`)) return;
+  try {
+    await api('DELETE', `/api/creator/shops/${currentShop.id}`);
+    toast('Διαγράφηκε', 'warn');
+    closeSheet('shopSheet');
+    loadDashboard();
+  } catch (e) { toast(e.message, 'error'); }
+};
+</script>
+</body>
+</html>

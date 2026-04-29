@@ -796,6 +796,134 @@ app.get('/api/shops/:slug/google', async (req, res) => {
   }
 });
 
+// ============ CREATOR DASHBOARD API ============
+// Όλα απαιτούν super-admin (creator) auth.
+
+app.get('/api/creator/summary', requireSuperAdmin, (req, res) => {
+  const data = db.creatorSummary();
+  // Ενημερώστε με URLs για κάθε shop
+  data.shops = data.shops.map(s => ({
+    ...s,
+    booking_url: `${PUBLIC_URL}/?shop=${encodeURIComponent(s.slug)}`,
+    admin_url: `${PUBLIC_URL}/admin.html?shop=${encodeURIComponent(s.slug)}`,
+    qr_url: `${PUBLIC_URL}/qr.html?shop=${encodeURIComponent(s.slug)}`,
+  }));
+  res.json(data);
+});
+
+app.post('/api/creator/shops', requireSuperAdmin, (req, res) => {
+  const name = sanitizeStr(req.body?.name, 80);
+  const slug = sanitizeSlug(req.body?.slug || req.body?.name);
+  const address = sanitizeStr(req.body?.address, 160);
+  const phone = sanitizePhone(req.body?.phone);
+  const contact_email = sanitizeEmail(req.body?.contact_email);
+  const password = String(req.body?.password || '');
+  const barber_name = sanitizeStr(req.body?.barber_name, 60);
+  const monthly_per_barber_eur = Number(req.body?.monthly_per_barber_eur ?? 10);
+  const subscription_status = ['active','trial','inactive'].includes(req.body?.subscription_status) ? req.body.subscription_status : 'trial';
+
+  if (!name || !slug || !password) {
+    return res.status(400).json({ error: 'Συμπλήρωσε όνομα, slug και password.' });
+  }
+  if (password.length < 8) return res.status(400).json({ error: 'Ο κωδικός θέλει 8+ χαρακτήρες.' });
+  if (db.getShopBySlug(slug)) return res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' });
+
+  try {
+    const r = db.createShop({
+      slug, name, address, phone, contact_email,
+      admin_password_hash: auth.hashPassword(password),
+    });
+    const shopId = r.lastInsertRowid;
+    db.updateShopSubscription(shopId, { subscription_status, monthly_per_barber_eur, contact_email });
+    if (barber_name) {
+      db.createBarber({
+        shop_id: shopId, slug: sanitizeSlug(barber_name) || 'barber',
+        name: barber_name, default_capacity: 2, avg_minutes: 30,
+        open_hour: 9, close_hour: 20, sort_order: 1,
+      });
+    }
+    res.json({ ok: true, id: shopId, slug });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Σφάλμα δημιουργίας.' });
+  }
+});
+
+app.patch('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  const shop = db.getShopById(id);
+  if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
+
+  // Update basic info
+  if (req.body.name || req.body.address != null || req.body.phone != null || req.body.slug) {
+    db.updateShop(id, {
+      slug: req.body.slug ? sanitizeSlug(req.body.slug) : shop.slug,
+      name: sanitizeStr(req.body.name, 80) || shop.name,
+      address: req.body.address != null ? sanitizeStr(req.body.address, 160) : shop.address,
+      phone: req.body.phone != null ? sanitizePhone(req.body.phone) : shop.phone,
+      photo: shop.photo,
+      google_place_id: shop.google_place_id,
+      google_maps_url: shop.google_maps_url,
+    });
+  }
+  // Update subscription
+  db.updateShopSubscription(id, {
+    subscription_status: req.body.subscription_status,
+    subscription_period_end: req.body.subscription_period_end,
+    monthly_per_barber_eur: req.body.monthly_per_barber_eur != null ? Number(req.body.monthly_per_barber_eur) : null,
+    is_active: req.body.is_active,
+    billing_notes: req.body.billing_notes,
+    contact_email: req.body.contact_email != null ? sanitizeEmail(req.body.contact_email) : null,
+  });
+  res.json({ ok: true });
+});
+
+app.post('/api/creator/shops/:id/reset-password', requireSuperAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  const newPwd = String(req.body?.password || '');
+  if (newPwd.length < 8) return res.status(400).json({ error: 'Κωδικός 8+ χαρακτήρες.' });
+  if (!db.getShopById(id)) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
+  db.setShopPassword(id, auth.hashPassword(newPwd));
+  res.json({ ok: true });
+});
+
+app.delete('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
+  db.deleteShop(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// Add barber to existing shop
+app.post('/api/creator/shops/:id/barbers', requireSuperAdmin, (req, res) => {
+  const shopId = Number(req.params.id);
+  if (!db.getShopById(shopId)) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
+  const name = sanitizeStr(req.body?.name, 60);
+  const slug = sanitizeSlug(req.body?.slug || name);
+  if (!name || !slug) return res.status(400).json({ error: 'Όνομα και slug απαιτούνται.' });
+  try {
+    const r = db.createBarber({
+      shop_id: shopId, slug, name,
+      bio: sanitizeStr(req.body?.bio, 100),
+      default_capacity: Number(req.body?.default_capacity) || 2,
+      avg_minutes: Number(req.body?.avg_minutes) || 30,
+      open_hour: Number(req.body?.open_hour) || 9,
+      close_hour: Number(req.body?.close_hour) || 20,
+      sort_order: Number(req.body?.sort_order) || 0,
+    });
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(409).json({ error: 'Αυτό το slug υπάρχει στο κουρείο.' });
+  }
+});
+
+app.delete('/api/creator/barbers/:id', requireSuperAdmin, (req, res) => {
+  db.deleteBarber(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+app.get('/api/creator/shops/:id/barbers', requireSuperAdmin, (req, res) => {
+  res.json(db.listBarbersByShop(Number(req.params.id), true));
+});
+
 // ---------- QR (per shop ή generic) ----------
 app.get('/api/qr.png', async (req, res) => {
   const url = req.query.url ? String(req.query.url) : `${PUBLIC_URL}/`;

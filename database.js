@@ -105,6 +105,13 @@ try {
   if (!scols.some(c => c.name === 'google_place_id')) db.exec(`ALTER TABLE shops ADD COLUMN google_place_id TEXT DEFAULT ''`);
   if (!scols.some(c => c.name === 'google_maps_url')) db.exec(`ALTER TABLE shops ADD COLUMN google_maps_url TEXT DEFAULT ''`);
   if (!scols.some(c => c.name === 'admin_password_hash')) db.exec(`ALTER TABLE shops ADD COLUMN admin_password_hash TEXT DEFAULT ''`);
+  // Subscriptions tracking
+  if (!scols.some(c => c.name === 'subscription_status')) db.exec(`ALTER TABLE shops ADD COLUMN subscription_status TEXT DEFAULT 'trial'`);
+  if (!scols.some(c => c.name === 'subscription_period_end')) db.exec(`ALTER TABLE shops ADD COLUMN subscription_period_end TEXT DEFAULT ''`);
+  if (!scols.some(c => c.name === 'monthly_per_barber_eur')) db.exec(`ALTER TABLE shops ADD COLUMN monthly_per_barber_eur INTEGER DEFAULT 10`);
+  if (!scols.some(c => c.name === 'is_active')) db.exec(`ALTER TABLE shops ADD COLUMN is_active INTEGER DEFAULT 1`);
+  if (!scols.some(c => c.name === 'billing_notes')) db.exec(`ALTER TABLE shops ADD COLUMN billing_notes TEXT DEFAULT ''`);
+  if (!scols.some(c => c.name === 'contact_email')) db.exec(`ALTER TABLE shops ADD COLUMN contact_email TEXT DEFAULT ''`);
 } catch (_) {}
 
 // ---------- Seed: αν δεν υπάρχει κανένα shop, βάλε ένα demo με 2 barbers ----------
@@ -271,6 +278,63 @@ function updateShop(id, s) {
 }
 function setShopPassword(id, hash) { return stmts.shops.updatePassword.run(hash, id); }
 function getShopByIdWithAuth(id) { return stmts.shops.byId.get(id); }
+
+// Subscriptions / billing
+function updateShopSubscription(id, fields) {
+  const sql = `UPDATE shops SET
+    subscription_status = COALESCE(?, subscription_status),
+    subscription_period_end = COALESCE(?, subscription_period_end),
+    monthly_per_barber_eur = COALESCE(?, monthly_per_barber_eur),
+    is_active = COALESCE(?, is_active),
+    billing_notes = COALESCE(?, billing_notes),
+    contact_email = COALESCE(?, contact_email)
+   WHERE id = ?`;
+  return db.prepare(sql).run(
+    fields.subscription_status ?? null,
+    fields.subscription_period_end ?? null,
+    fields.monthly_per_barber_eur ?? null,
+    fields.is_active != null ? (fields.is_active ? 1 : 0) : null,
+    fields.billing_notes ?? null,
+    fields.contact_email ?? null,
+    id
+  );
+}
+
+function shopStats(shopId) {
+  const barbers = db.prepare(`SELECT COUNT(*) AS n FROM barbers WHERE shop_id = ? AND active = 1`).get(shopId).n;
+  const totalBarbers = db.prepare(`SELECT COUNT(*) AS n FROM barbers WHERE shop_id = ?`).get(shopId).n;
+  const upcoming = db.prepare(`
+    SELECT COUNT(*) AS n FROM appointments a
+    JOIN barbers b ON b.id = a.barber_id
+    WHERE b.shop_id = ? AND a.status IN ('pending','confirmed')
+      AND a.appointment_date >= ?
+  `).get(shopId, new Date().toISOString().slice(0,10)).n;
+  const allTime = db.prepare(`
+    SELECT COUNT(*) AS n FROM appointments a
+    JOIN barbers b ON b.id = a.barber_id
+    WHERE b.shop_id = ?
+  `).get(shopId).n;
+  return { activeBarbers: barbers, totalBarbers, upcomingAppts: upcoming, allTimeAppts: allTime };
+}
+
+function creatorSummary() {
+  const shops = stmts.shops.list.all();
+  const enriched = shops.map(s => ({ ...s, stats: shopStats(s.id) }));
+  const totalActiveShops = enriched.filter(s => s.is_active && s.subscription_status === 'active').length;
+  const totalActiveBarbers = enriched.filter(s => s.is_active).reduce((sum, s) => sum + s.stats.activeBarbers, 0);
+  const monthlyRevenue = enriched
+    .filter(s => s.is_active && s.subscription_status === 'active')
+    .reduce((sum, s) => sum + s.stats.activeBarbers * (s.monthly_per_barber_eur || 0), 0);
+  return {
+    shops: enriched,
+    totals: {
+      shops: enriched.length,
+      activeShops: totalActiveShops,
+      barbers: totalActiveBarbers,
+      monthlyRevenue,
+    },
+  };
+}
 function deleteShop(id)      { return stmts.shops.delete.run(id); }
 
 function listBarbersByShop(shopId, includeInactive=false) {
@@ -383,6 +447,7 @@ function upsertShopPrice(shopId, haircutType, priceEur) {
 module.exports = {
   // shops
   listShops, getShopBySlug, getShopById, createShop, updateShop, deleteShop, setShopPassword,
+  updateShopSubscription, shopStats, creatorSummary,
   // customer history & prices
   getCustomerHistory, listShopPrices, upsertShopPrice,
   // barbers
