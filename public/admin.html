@@ -86,8 +86,8 @@
         <h3>🔔 Νέα αιτήματα</h3>
         <div id="pendingSection"></div>
 
-        <!-- Today's confirmed schedule -->
-        <h3 style="margin-top: 24px;">📅 Σημερινό πρόγραμμα</h3>
+        <!-- Upcoming confirmed schedule (επόμενες 7 μέρες) -->
+        <h3 style="margin-top: 24px;">📅 Επερχόμενα ραντεβού</h3>
         <div id="todayList"></div>
       </div>
     </section>
@@ -649,17 +649,19 @@
     const greet = h < 6 ? 'Καληνύχτα' : h < 12 ? 'Καλημέρα' : h < 18 ? 'Καλησπέρα' : 'Καλό βράδυ';
     $('greeting').textContent = greet + ' 👋';
 
-    const all = await api('GET', `/api/admin/shops/${currentShop.id}/appointments?date=${todayDate}`);
-    const confirmed = all.filter(a => a.status === 'confirmed');
+    // Upcoming = όλα τα confirmed/pending από σήμερα και μετά
+    const all = await api('GET', `/api/admin/shops/${currentShop.id}/appointments`);
+    const confirmedToday = all.filter(a => a.status === 'confirmed' && a.appointment_date === todayDate);
+    const upcomingConfirmed = all.filter(a => a.status === 'confirmed' && a.appointment_date >= todayDate);
     const pending = all.filter(a => a.status === 'pending');
 
-    $('todayCount').textContent = confirmed.length;
-    $('todayHint').textContent = pending.length ? `+ ${pending.length} αιτήματα` : 'όλα έτοιμα';
+    $('todayCount').textContent = confirmedToday.length;
+    $('todayHint').textContent = pending.length ? `+ ${pending.length} αιτήματα` : 'σήμερα';
 
-    // Revenue (use price list per service)
+    // Revenue
     const prices = await fetch(`/api/shops/${encodeURIComponent(currentShop.slug)}/prices`).then(r => r.json());
     const priceMap = {}; for (const p of prices) priceMap[p.haircut_type] = Number(p.price_eur) || 0;
-    const revenue = confirmed.reduce((s, a) => s + (priceMap[a.haircut_type] || 0), 0);
+    const revenue = confirmedToday.reduce((s, a) => s + (priceMap[a.haircut_type] || 0), 0);
     $('todayRevenue').textContent = '€' + Math.round(revenue);
 
     // Pending requests on top
@@ -671,12 +673,12 @@
       wireApptActions(ps);
     }
 
-    // Today's confirmed list
+    // Επερχόμενα confirmed (όχι μόνο σήμερα)
     const tl = $('todayList');
-    if (!confirmed.length) {
-      tl.innerHTML = '<div class="empty"><div class="em">📭</div><p>Δεν έχεις ραντεβού σήμερα</p></div>';
+    if (!upcomingConfirmed.length) {
+      tl.innerHTML = '<div class="empty"><div class="em">📭</div><p>Δεν έχεις επερχόμενα ραντεβού</p></div>';
     } else {
-      tl.innerHTML = await Promise.all(confirmed.map(a => renderApptCard(a))).then(arr => arr.join(''));
+      tl.innerHTML = await Promise.all(upcomingConfirmed.map(a => renderApptCard(a))).then(arr => arr.join(''));
       wireApptActions(tl);
     }
   }
@@ -909,52 +911,86 @@
     } catch (e) { toast(e.message, 'error'); }
   });
 
-  /* ============ Schedule (weekly) ============ */
+  /* ============ Schedule (weekly) — με σπαστό ωράριο support ============ */
+  // Internal state: weeklyState[i] = { blocked, shifts: [{open,close}, ...] }
+  let weeklyState = [];
+
   function renderWeekly() {
     if (!currentSchedBarber) return;
     let weekly = [];
     try { weekly = JSON.parse(currentSchedBarber.weekly_schedule || '[]'); } catch (_) {}
     if (!Array.isArray(weekly) || weekly.length !== 7) {
-      weekly = Array(7).fill(null).map(() => ({ open: currentSchedBarber.open_hour, close: currentSchedBarber.close_hour, blocked: false }));
+      weekly = Array(7).fill(null).map(() => ({ blocked: false, shifts: [{ open: currentSchedBarber.open_hour, close: currentSchedBarber.close_hour }] }));
     }
+    // Normalize: παλιό format {open, close} → νέο {shifts:[{open,close}]}
+    weeklyState = weekly.map(w => {
+      if (!w) return { blocked: true, shifts: [] };
+      if (w.blocked) return { blocked: true, shifts: w.shifts || [] };
+      if (Array.isArray(w.shifts) && w.shifts.length) return { blocked: false, shifts: w.shifts };
+      if (w.open != null && w.close != null) return { blocked: false, shifts: [{ open: w.open, close: w.close }] };
+      return { blocked: false, shifts: [{ open: 9, close: 20 }] };
+    });
+    drawWeekly();
+  }
+
+  function drawWeekly() {
     const days = ['Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'];
-    $('weeklyDays').innerHTML = days.map((d, i) => {
-      const w = weekly[i] || {};
+    $('weeklyDays').innerHTML = days.map((dayName, i) => {
+      const w = weeklyState[i];
+      const shiftsHtml = w.shifts.map((s, si) => `
+        <div class="row tight" style="align-items:end" data-shift="${si}">
+          <div class="field" style="margin:0">
+            <label>${si === 0 ? 'Άνοιγμα' : 'Άνοιγμα ' + (si+1) + 'ης βάρδιας'}</label>
+            <input type="number" min="0" max="23" class="input" data-day="${i}" data-shift="${si}" data-key="open" value="${s.open ?? ''}" style="padding: 8px 12px">
+          </div>
+          <div class="field" style="margin:0">
+            <label>Κλείσιμο</label>
+            <input type="number" min="1" max="24" class="input" data-day="${i}" data-shift="${si}" data-key="close" value="${s.close ?? ''}" style="padding: 8px 12px">
+          </div>
+          ${w.shifts.length > 1 ? `<button class="btn icon small ghost" data-act="rm-shift" data-day="${i}" data-shift="${si}" title="Αφαίρεση">✕</button>` : ''}
+        </div>`).join('');
       return `
         <div class="card-row" style="margin-bottom:8px; flex-direction: column; align-items: stretch; gap: 10px; cursor: default">
           <div class="flex">
-            <div style="font-weight:700; flex:1">${d}</div>
-            <label class="chip"><input type="checkbox" data-day="${i}" data-key="blocked" ${w.blocked ? 'checked' : ''}> Ρεπό</label>
+            <div style="font-weight:700; flex:1">${dayName}</div>
+            <label class="chip"><input type="checkbox" data-act="block" data-day="${i}" ${w.blocked ? 'checked' : ''}> Ρεπό</label>
           </div>
-          <div class="row tight" data-row="${i}" ${w.blocked ? 'style="opacity:0.4; pointer-events:none"' : ''}>
-            <div class="field" style="margin:0">
-              <label>Άνοιγμα</label>
-              <input type="number" min="0" max="23" class="input" data-day="${i}" data-key="open" value="${w.open ?? ''}" style="padding: 8px 12px">
-            </div>
-            <div class="field" style="margin:0">
-              <label>Κλείσιμο</label>
-              <input type="number" min="1" max="24" class="input" data-day="${i}" data-key="close" value="${w.close ?? ''}" style="padding: 8px 12px">
-            </div>
+          <div ${w.blocked ? 'style="opacity:0.4; pointer-events:none"' : ''} data-rows="${i}">
+            ${shiftsHtml}
+            ${!w.blocked && w.shifts.length < 3 ? `<button class="btn small ghost" data-act="add-shift" data-day="${i}" style="margin-top:6px; width:auto">+ Σπαστό ωράριο</button>` : ''}
           </div>
         </div>`;
     }).join('');
-    document.querySelectorAll('input[data-day][data-key="blocked"]').forEach(el => el.onchange = () => {
-      const i = el.dataset.day;
-      $('weeklyDays').querySelector(`[data-row="${i}"]`).style.opacity = el.checked ? '0.4' : '1';
-      $('weeklyDays').querySelector(`[data-row="${i}"]`).style.pointerEvents = el.checked ? 'none' : '';
+
+    // Event handlers
+    document.querySelectorAll('#weeklyDays input[data-act="block"]').forEach(el => el.onchange = () => {
+      const i = Number(el.dataset.day);
+      weeklyState[i].blocked = el.checked;
+      drawWeekly();
+    });
+    document.querySelectorAll('#weeklyDays button[data-act="add-shift"]').forEach(el => el.onclick = () => {
+      const i = Number(el.dataset.day);
+      // Pick ένα reasonable default για 2η βάρδια
+      const last = weeklyState[i].shifts[weeklyState[i].shifts.length - 1];
+      weeklyState[i].shifts.push({ open: (last?.close || 14) + 3, close: (last?.close || 14) + 7 });
+      drawWeekly();
+    });
+    document.querySelectorAll('#weeklyDays button[data-act="rm-shift"]').forEach(el => el.onclick = () => {
+      const i = Number(el.dataset.day), si = Number(el.dataset.shift);
+      weeklyState[i].shifts.splice(si, 1);
+      drawWeekly();
+    });
+    document.querySelectorAll('#weeklyDays input[data-key]').forEach(el => el.oninput = () => {
+      const i = Number(el.dataset.day), si = Number(el.dataset.shift);
+      const v = Number(el.value);
+      if (!isNaN(v)) weeklyState[i].shifts[si][el.dataset.key] = v;
     });
   }
+
   $('saveWeeklyBtn').onclick = async () => {
     if (!currentSchedBarber) return;
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const blocked = $('weeklyDays').querySelector(`input[data-day="${i}"][data-key="blocked"]`).checked;
-      const open = Number($('weeklyDays').querySelector(`input[data-day="${i}"][data-key="open"]`).value) || 9;
-      const close = Number($('weeklyDays').querySelector(`input[data-day="${i}"][data-key="close"]`).value) || 20;
-      days.push({ open, close, blocked });
-    }
     try {
-      await api('PUT', `/api/admin/barbers/${currentSchedBarber.id}`, { weekly_schedule: days });
+      await api('PUT', `/api/admin/barbers/${currentSchedBarber.id}`, { weekly_schedule: weeklyState });
       toast('Εβδομαδιαίο αποθηκεύτηκε ✓', 'success');
       allBarbers = await api('GET', `/api/admin/shops/${currentShop.id}/barbers`);
       currentSchedBarber = allBarbers.find(b => b.id === currentSchedBarber.id);
@@ -1067,16 +1103,33 @@
 
   /* ============ Settings: Barbers ============ */
   function renderBarbersList() {
-    $('barbersList').innerHTML = allBarbers.length ? allBarbers.map(b => `
+    $('barbersList').innerHTML = allBarbers.length ? allBarbers.map(b => {
+      const barberUrl = `${location.origin}/?shop=${encodeURIComponent(currentShop.slug)}&barber=${encodeURIComponent(b.slug)}`;
+      return `
       <div class="card-row" data-id="${b.id}" style="margin-bottom:8px">
         <div class="${avatarClass(b.name)}">${escapeHtml(b.name.slice(0,1))}</div>
         <div class="info">
           <div class="name">${escapeHtml(b.name)}</div>
-          <div class="meta">${b.open_hour}:00–${b.close_hour}:00 · ${b.avg_minutes || 30}'/κούρεμα</div>
+          <div class="meta">${b.open_hour}:00–${b.close_hour}:00</div>
         </div>
+        <button class="btn icon small ghost" data-act="qr" data-id="${b.id}" data-slug="${b.slug}" title="QR κουρέα">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 17h4M21 14v7M14 17v4"/></svg>
+        </button>
         <div class="chev">›</div>
-      </div>`).join('') : '<p class="muted center">Κανένας κουρέας ακόμη</p>';
-    $('barbersList').querySelectorAll('.card-row').forEach(el => el.onclick = () => openBarberSheet(Number(el.dataset.id)));
+      </div>`;
+    }).join('') : '<p class="muted center">Κανένας κουρέας ακόμη</p>';
+
+    $('barbersList').querySelectorAll('.card-row').forEach(el => {
+      el.onclick = (e) => {
+        if (e.target.closest('[data-act="qr"]')) return;
+        openBarberSheet(Number(el.dataset.id));
+      };
+    });
+    $('barbersList').querySelectorAll('button[data-act="qr"]').forEach(el => el.onclick = (e) => {
+      e.stopPropagation();
+      const slug = el.dataset.slug;
+      window.open(`/qr.html?shop=${encodeURIComponent(currentShop.slug)}&barber=${encodeURIComponent(slug)}`, '_blank');
+    });
   }
   function openBarberSheet(id) {
     const b = id ? allBarbers.find(x => x.id === id) : null;

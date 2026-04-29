@@ -147,13 +147,34 @@ function defaultCapFromBarber(barber) {
 }
 
 function getWeekly(barber, date) {
-  // Επιστρέφει { open, close, blocked } για τη μέρα της εβδομάδας
+  // Επιστρέφει { open, close, blocked, shifts? } για τη μέρα της εβδομάδας.
+  // shifts = προαιρετικός πίνακας [{open, close}] για σπαστό ωράριο
+  // (π.χ. Τρ 9-14 και 17-21 = [{open:9,close:14},{open:17,close:21}]).
   if (!barber.weekly_schedule) return null;
   try {
     const arr = JSON.parse(barber.weekly_schedule);
-    const dow = new Date(date).getDay(); // 0=Κυρ
+    const dow = new Date(date).getDay();
     return arr[dow] || null;
   } catch (_) { return null; }
+}
+
+function getShiftsForDay(barber, date, dayOv) {
+  // Priority: dayOv > weekly.shifts > weekly.open/close > barber default
+  if (dayOv && dayOv.blocked) return [];
+  if (dayOv && dayOv.open_hour != null && dayOv.close_hour != null) {
+    return [{ open: dayOv.open_hour, close: dayOv.close_hour }];
+  }
+  const weekly = getWeekly(barber, date);
+  if (weekly) {
+    if (weekly.blocked) return [];
+    if (Array.isArray(weekly.shifts) && weekly.shifts.length) {
+      return weekly.shifts.filter(s => s && s.open != null && s.close != null);
+    }
+    if (weekly.open != null && weekly.close != null) {
+      return [{ open: weekly.open, close: weekly.close }];
+    }
+  }
+  return [{ open: barber.open_hour, close: barber.close_hour }];
 }
 
 function effectiveCapacityForHour({ barber, dayOv, hourOv }) {
@@ -224,10 +245,11 @@ app.get('/api/shops/:shopSlug/barbers/:barberSlug/availability', (req, res) => {
   const hourOvMap = {};
   for (const h of hourOvList) hourOvMap[String(h.hour).padStart(2,'0')] = h;
 
-  const weekly = getWeekly(barber, date);
-  const oc = effectiveOpenClose({ barber, dayOv, weekly });
-  if (oc.blocked) return res.json({ date, barber: { id: barber.id, slug: barber.slug, name: barber.name }, slots: [], blockedDay: true, reason: 'Ρεπό' });
-  const slots = generateHalfSlots(oc.open, oc.close);
+  const shifts = getShiftsForDay(barber, date, dayOv);
+  if (!shifts.length) return res.json({ date, barber: { id: barber.id, slug: barber.slug, name: barber.name }, slots: [], blockedDay: true, reason: 'Ρεπό' });
+  // Generate slots για κάθε shift, και combine
+  const slots = [];
+  for (const shift of shifts) slots.push(...generateHalfSlots(shift.open, shift.close));
 
   const confirmedByHour = db.countConfirmedByHour(barber.id, date);
   const pendingByHour = db.countPendingByHour(barber.id, date);
@@ -463,17 +485,30 @@ app.get('/api/admin/shops/:shopId/barbers', requireAdmin, (req, res) => {
   res.json(db.listBarbersByShop(Number(req.params.shopId), true));
 });
 function normalizeWeeklySchedule(input) {
-  // accepts array of 7 items or null/undefined
+  // Accepts array of 7 items: { blocked, shifts: [{open,close}, ...] }
+  // or legacy { blocked, open, close }
   if (!input) return '';
   if (typeof input === 'string') {
     try { JSON.parse(input); return input; } catch (_) { return ''; }
   }
   if (Array.isArray(input) && input.length === 7) {
-    return JSON.stringify(input.map(d => d ? {
-      open: Number(d.open) || 0,
-      close: Number(d.close) || 0,
-      blocked: !!d.blocked,
-    } : { blocked: true }));
+    return JSON.stringify(input.map(d => {
+      if (!d) return { blocked: true };
+      if (d.blocked) return { blocked: true };
+      // Νέο format με shifts
+      if (Array.isArray(d.shifts) && d.shifts.length) {
+        const shifts = d.shifts
+          .filter(s => s && s.open != null && s.close != null && Number(s.close) > Number(s.open))
+          .map(s => ({ open: Number(s.open), close: Number(s.close) }));
+        if (shifts.length) return { blocked: false, shifts };
+        return { blocked: true };
+      }
+      // Legacy: open/close → ένα shift
+      if (d.open != null && d.close != null) {
+        return { blocked: false, shifts: [{ open: Number(d.open), close: Number(d.close) }] };
+      }
+      return { blocked: true };
+    }));
   }
   return '';
 }

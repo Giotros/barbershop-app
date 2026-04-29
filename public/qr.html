@@ -26,7 +26,10 @@
   <script>
     const params = new URLSearchParams(location.search);
     const shop = params.get('shop');
-    const url = shop ? `${location.origin}/?shop=${encodeURIComponent(shop)}` : `${location.origin}/`;
+    const barber = params.get('barber');
+    let url = location.origin + '/';
+    if (shop) url += '?shop=' + encodeURIComponent(shop);
+    if (shop && barber) url += '&barber=' + encodeURIComponent(barber);
     document.getElementById('qr').src = `/api/qr.png?url=${encodeURIComponent(url)}`;
     document.getElementById('url').textContent = url;
   </script>

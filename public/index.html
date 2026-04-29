@@ -244,10 +244,20 @@
   async function loadShops() {
     const params = new URLSearchParams(location.search);
     const directShopSlug = params.get('shop');
+    const directBarberSlug = params.get('barber');
     const list = await fetch('/api/shops').then(r => r.json());
     if (directShopSlug) {
       const target = list.find(s => s.slug === directShopSlug);
-      if (target) return openShop(target);
+      if (target) {
+        await openShop(target);
+        // Αν δοθηκε και barber, πάμε κατευθείαν εκει
+        if (directBarberSlug && state.shop) {
+          const data = await fetch('/api/shops/' + encodeURIComponent(target.slug)).then(r => r.json());
+          const b = data.barbers.find(x => x.slug === directBarberSlug);
+          if (b) return openBarber(b);
+        }
+        return;
+      }
     }
     if (list.length === 1) return openShop(list[0]);
 
@@ -303,7 +313,6 @@
       return `<div class="tile" data-id="${s.id}">
         <div class="body">
           <div class="name">${escapeHtml(s.label)}</div>
-          <div class="meta">~${s.minutes} λεπτά</div>
         </div>
         ${price ? `<div class="price">€${price}</div>` : '<div class="chev">›</div>'}
       </div>`;
