@@ -1,8 +1,37 @@
 // Multi-tenant βάση: shops → barbers → appointments + capacity overrides
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'barbershop.db');
+// Resolve DB path με graceful fallback αν το dir δεν υπάρχει
+function resolveDbPath() {
+  const envPath = process.env.DB_PATH;
+  const fallback = path.join(__dirname, 'barbershop.db');
+  if (!envPath) return fallback;
+
+  const dir = path.dirname(envPath);
+  // Αν το dir δεν υπάρχει, δοκίμασε να το φτιάξεις
+  if (!fs.existsSync(dir)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`[db] Δημιουργήθηκε directory: ${dir}`);
+    } catch (e) {
+      console.warn(`[db] ΠΡΟΣΟΧΗ: Δεν μπορώ να φτιάξω το ${dir} (${e.message}). Fallback σε ${fallback}.`);
+      return fallback;
+    }
+  }
+  // Test write access
+  try {
+    fs.accessSync(dir, fs.constants.W_OK);
+    return envPath;
+  } catch (e) {
+    console.warn(`[db] ΠΡΟΣΟΧΗ: Δεν έχω write access στο ${dir}. Fallback σε ${fallback}.`);
+    return fallback;
+  }
+}
+
+const DB_PATH = resolveDbPath();
+console.log(`[db] Using database: ${DB_PATH}`);
 const db = new Database(DB_PATH);
 try { db.pragma('journal_mode = WAL'); } catch (_) {}
 

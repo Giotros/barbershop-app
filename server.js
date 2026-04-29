@@ -387,6 +387,17 @@ function requireShopAccess(shopIdParam = 'shopId') {
   };
 }
 
+// Debug endpoint: ποια auth μέθοδοι είναι ενεργές (no auth required)
+app.get('/api/admin/auth-status', (req, res) => {
+  res.json({
+    creatorPasswordSet: !!(process.env.CREATOR_PASSWORD || process.env.CREATOR_PASSWORD_HASH),
+    superAdminPasswordSet: !!(process.env.SUPER_ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD_HASH),
+    legacyAdminPasswordSet: !!process.env.ADMIN_PASSWORD,
+    jwtSecretSet: !!process.env.JWT_SECRET,
+    note: 'Όποιο από αυτά είναι set, η τιμή του δουλεύει ως login κωδικός για super admin / creator.',
+  });
+});
+
 // Login για super admin (marketplace owner)
 app.post('/api/admin/login', loginLimiter, (req, res) => {
   const { password, mode = 'super' } = req.body || {};
