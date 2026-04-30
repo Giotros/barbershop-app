@@ -21,20 +21,28 @@
 
   <!-- LOGIN -->
   <div class="app no-nav" id="view-login">
-    <div class="hero" style="text-align:center; padding-top: 80px;">
+    <div class="hero" style="text-align:center; padding-top: 60px;">
       <div style="font-size:54px; margin-bottom:8px">✂️</div>
       <h1>Barberhub</h1>
-      <p>Σύνδεση διαχειριστή</p>
+      <p id="loginSubtitle">Σύνδεση διαχειριστή</p>
     </div>
     <div class="section">
       <div class="card elevated">
+        <div class="field" id="phoneFieldWrap">
+          <label>Κινητό</label>
+          <input id="loginPhone" class="input" type="tel" autocomplete="tel" placeholder="6912345678" inputmode="tel" />
+        </div>
         <div class="field">
-          <label>Κωδικός διαχείρισης</label>
+          <label>Κωδικός</label>
           <input id="pwd" class="input" type="password" autocomplete="current-password" placeholder="••••••••" />
         </div>
+        <label class="chip" style="margin-bottom: 14px">
+          <input type="checkbox" id="rememberMe" checked> Να με θυμάσαι
+        </label>
         <button class="btn full" id="loginBtn">Σύνδεση</button>
         <div id="loginErr" class="alert error" style="display:none; margin-top:12px"></div>
       </div>
+
       <p class="small muted center" style="margin-top: 18px">
         Δεν έχεις λογαριασμό; <a href="/signup.html" style="color: var(--accent); font-weight:700">Δημιουργία κουρείου</a>
       </p>
@@ -414,6 +422,30 @@
   const $ = id => document.getElementById(id);
   const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtDate = iso => iso.split('-').reverse().join('/');
+  // "2026-05-01" → "Παρ, 1 Μαΐου 2026"
+  const fmtDateLong = iso => {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+    const [y,m,d] = iso.split('-').map(Number);
+    const months = ['Ιανουαρίου','Φεβρουαρίου','Μαρτίου','Απριλίου','Μαΐου','Ιουνίου','Ιουλίου','Αυγούστου','Σεπτεμβρίου','Οκτωβρίου','Νοεμβρίου','Δεκεμβρίου'];
+    const days = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
+    const dt = new Date(y, m-1, d);
+    return `${days[dt.getDay()]}, ${d} ${months[m-1]} ${y}`;
+  };
+  // attach explicit DD/MM display μετά από κάθε date input
+  function attachDateHint(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el || el.dataset.hintAttached) return;
+    el.dataset.hintAttached = '1';
+    const hint = document.createElement('div');
+    hint.className = 'muted small';
+    hint.style.marginTop = '4px';
+    hint.style.padding = '0 4px';
+    el.parentElement.insertBefore(hint, el.nextSibling);
+    const update = () => { hint.textContent = el.value ? '→ ' + fmtDateLong(el.value) : ''; };
+    el.addEventListener('input', update);
+    el.addEventListener('change', update);
+    update();
+  }
   const today = () => new Date().toISOString().slice(0,10);
   const SHOP_KEY = 'bh_admin_shop';
   let currentShop = null, allBarbers = [], allShops = [];
@@ -457,21 +489,44 @@
   }
 
   /* ============ Auth ============ */
-  // Login: super admin ή shop admin (αν δοθεί shop slug στο URL)
+  const REMEMBER_KEY = 'bh_remember_phone';
+  // Setup UI ανάλογα με context (super admin vs shop)
+  (function setupLoginUI() {
+    const params = new URLSearchParams(location.search);
+    const shopSlug = params.get('shop');
+    if (!shopSlug) {
+      $('phoneFieldWrap').style.display = 'none';
+      $('loginSubtitle').textContent = 'Σύνδεση creator';
+    } else {
+      $('loginSubtitle').textContent = 'Σύνδεση κουρείου';
+      // Pre-fill remembered phone
+      const remembered = localStorage.getItem(REMEMBER_KEY + '_' + shopSlug);
+      if (remembered) $('loginPhone').value = remembered;
+    }
+  })();
+
   $('loginBtn').onclick = async () => {
+    const phone = $('loginPhone').value.trim();
     const password = $('pwd').value;
+    const remember = $('rememberMe').checked;
     const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Σύνδεση...';
     const params = new URLSearchParams(location.search);
     const shopSlug = params.get('shop');
     const url = shopSlug ? `/api/shops/${encodeURIComponent(shopSlug)}/login` : '/api/admin/login';
     try {
+      const body = shopSlug ? { phone, password } : { password };
       const r = await fetch(url, {
         method:'POST', headers: {'Content-Type':'application/json'},
         credentials: 'include',
-        body: JSON.stringify({ password })
+        body: JSON.stringify(body)
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || 'Λάθος κωδικός');
+      if (!r.ok) throw new Error(data.error || 'Λάθος στοιχεία');
+      // Save phone if remember me + shop login
+      if (shopSlug) {
+        if (remember) localStorage.setItem(REMEMBER_KEY + '_' + shopSlug, phone);
+        else localStorage.removeItem(REMEMBER_KEY + '_' + shopSlug);
+      }
       me = data;
       showMain();
     } catch (e) {
@@ -482,6 +537,7 @@
     }
   };
   $('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+  $('loginPhone').addEventListener('keydown', e => { if (e.key === 'Enter') $('pwd').focus(); });
   $('logoutBtn')?.addEventListener('click', async () => {
     await fetch('/api/admin/logout', { method:'POST', credentials: 'include' });
     location.reload();
@@ -493,6 +549,8 @@
     config = await fetch('/api/config').then(r=>r.json());
     await loadShops();
     await loadAll();
+    // Προσάρτηση date hints σε όλα τα date inputs
+    ['schedDate','filterDate','m_date','na_date','confirmedDate'].forEach(attachDateHint);
     requestNotifPermission();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
     setInterval(loadCounts, 30000);
@@ -1262,11 +1320,31 @@
     document.getElementById('topbar')?.classList.toggle('scrolled', window.scrollY > 4);
   });
 
-  /* Init: αν υπάρχει ήδη session cookie, μπες κατευθείαν */
+  /* Init: αν υπάρχει ήδη valid session για το current context, μπες κατευθείαν */
   (async () => {
     try {
       const r = await fetch('/api/admin/me', { credentials: 'include' });
-      if (r.ok) { me = await r.json(); showMain(); }
+      if (!r.ok) return;
+      const session = await r.json();
+      const params = new URLSearchParams(location.search);
+      const shopSlug = params.get('shop');
+
+      if (shopSlug) {
+        // Shop login URL — θέλω να είμαι ή super admin ή shop admin για ΑΥΤΟ το shop
+        if (session.role === 'shop' && session.shopSlug !== shopSlug) {
+          // Shop session για άλλο shop → απαίτησε εκ νέου login
+          return;
+        }
+        if (session.role === 'super') {
+          // Super admin: δείχνεται warning bar αλλά πήγαινε στο shop
+          // (Καλύτερο UX: μπορεί να δει το shop ως owner)
+        }
+      } else {
+        // Super admin URL — μόνο super admin μπορεί
+        if (session.role !== 'super') return;
+      }
+      me = session;
+      showMain();
     } catch (_) {}
   })();
   </script>

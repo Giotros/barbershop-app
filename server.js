@@ -306,11 +306,23 @@ app.post('/api/shops/:shopSlug/barbers/:barberSlug/appointments', bookingLimiter
     return res.status(400).json({ error: 'Μη έγκυρος τύπος κουρέματος.' });
   }
 
-  // Έλεγχος capacity για την ώρα (θα το ξαναελέγξει ο κουρέας στην έγκριση)
+  // Έλεγχος ότι η μέρα δεν είναι ρεπό (από day_override ή weekly schedule)
   const dayOv = db.getDayOverride(barber.id, date);
   const hourOvList = db.listHourOverrides(barber.id, date);
   const hourOvMap = {};
   for (const h of hourOvList) hourOvMap[String(h.hour).padStart(2,'0')] = h;
+
+  const shifts = getShiftsForDay(barber, date, dayOv);
+  if (!shifts.length) {
+    return res.status(409).json({ error: 'Ο κουρέας έχει ρεπό αυτή τη μέρα.' });
+  }
+  // Η ώρα πρέπει να εμπίπτει σε κάποιο shift
+  const reqHour = Number(time.slice(0,2));
+  const inShift = shifts.some(s => reqHour >= s.open && reqHour < s.close);
+  if (!inShift) {
+    return res.status(409).json({ error: 'Αυτή η ώρα είναι εκτός ωραρίου.' });
+  }
+
   const hh = time.slice(0,2);
   const { capacity, blocked } = effectiveCapacityForHour({ barber, dayOv, hourOv: hourOvMap[hh] });
   if (blocked) return res.status(409).json({ error: 'Αυτή η ώρα είναι κλειστή.' });
@@ -415,15 +427,28 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
   return res.status(401).json({ error: 'Λάθος κωδικός.' });
 });
 
-// Login για συγκεκριμένο κουρείο (shop owner)
+// Login για συγκεκριμένο κουρείο (shop owner) — phone + password (no 2FA)
 app.post('/api/shops/:slug/login', loginLimiter, (req, res) => {
-  const { password } = req.body || {};
+  const { phone, password } = req.body || {};
   const shop = db.getShopBySlug(req.params.slug);
   if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   if (!shop.admin_password_hash) return res.status(403).json({ error: 'Δεν έχει οριστεί κωδικός για το κατάστημα.' });
-  if (!auth.verifyPassword(password, shop.admin_password_hash)) {
-    return res.status(401).json({ error: 'Λάθος κωδικός.' });
+
+  // Αν το shop έχει admin_phone, απαίτησε επιβεβαίωση
+  if (shop.admin_phone) {
+    if (!phone) return res.status(400).json({ error: 'Συμπλήρωσε το κινητό σου.' });
+    const storedDigits = String(shop.admin_phone).replace(/\D/g, '');
+    const inputDigits = String(phone).replace(/\D/g, '');
+    // Match αν τα τελευταία 10 digits συμπίπτουν (ευέλικτο για +30 prefix κλπ.)
+    if (storedDigits.slice(-10) !== inputDigits.slice(-10)) {
+      return res.status(401).json({ error: 'Λάθος κινητό ή κωδικός.' });
+    }
   }
+
+  if (!auth.verifyPassword(password, shop.admin_password_hash)) {
+    return res.status(401).json({ error: 'Λάθος κινητό ή κωδικός.' });
+  }
+
   setSession(res, { role: 'shop', shopId: shop.id, shopSlug: shop.slug });
   res.json({ ok: true, role: 'shop', shopSlug: shop.slug, shopId: shop.id });
 });
@@ -828,10 +853,12 @@ app.post('/api/creator/shops', requireSuperAdmin, (req, res) => {
   const address = sanitizeStr(req.body?.address, 160);
   const phone = sanitizePhone(req.body?.phone);
   const contact_email = sanitizeEmail(req.body?.contact_email);
+  const admin_phone = sanitizePhone(req.body?.admin_phone);
   const password = String(req.body?.password || '');
   const barber_name = sanitizeStr(req.body?.barber_name, 60);
   const monthly_per_barber_eur = Number(req.body?.monthly_per_barber_eur ?? 10);
   const subscription_status = ['active','trial','inactive'].includes(req.body?.subscription_status) ? req.body.subscription_status : 'trial';
+  const two_factor_enabled = !!req.body?.two_factor_enabled;
 
   if (!name || !slug || !password) {
     return res.status(400).json({ error: 'Συμπλήρωσε όνομα, slug και password.' });
@@ -845,7 +872,7 @@ app.post('/api/creator/shops', requireSuperAdmin, (req, res) => {
       admin_password_hash: auth.hashPassword(password),
     });
     const shopId = r.lastInsertRowid;
-    db.updateShopSubscription(shopId, { subscription_status, monthly_per_barber_eur, contact_email });
+    db.updateShopSubscription(shopId, { subscription_status, monthly_per_barber_eur, contact_email, admin_phone, two_factor_enabled });
     if (barber_name) {
       db.createBarber({
         shop_id: shopId, slug: sanitizeSlug(barber_name) || 'barber',
@@ -885,6 +912,8 @@ app.patch('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
     is_active: req.body.is_active,
     billing_notes: req.body.billing_notes,
     contact_email: req.body.contact_email != null ? sanitizeEmail(req.body.contact_email) : null,
+    admin_phone: req.body.admin_phone != null ? sanitizePhone(req.body.admin_phone) : null,
+    two_factor_enabled: req.body.two_factor_enabled,
   });
   res.json({ ok: true });
 });

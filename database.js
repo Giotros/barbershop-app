@@ -141,6 +141,8 @@ try {
   if (!scols.some(c => c.name === 'is_active')) db.exec(`ALTER TABLE shops ADD COLUMN is_active INTEGER DEFAULT 1`);
   if (!scols.some(c => c.name === 'billing_notes')) db.exec(`ALTER TABLE shops ADD COLUMN billing_notes TEXT DEFAULT ''`);
   if (!scols.some(c => c.name === 'contact_email')) db.exec(`ALTER TABLE shops ADD COLUMN contact_email TEXT DEFAULT ''`);
+  if (!scols.some(c => c.name === 'admin_phone')) db.exec(`ALTER TABLE shops ADD COLUMN admin_phone TEXT DEFAULT ''`);
+  if (!scols.some(c => c.name === 'two_factor_enabled')) db.exec(`ALTER TABLE shops ADD COLUMN two_factor_enabled INTEGER DEFAULT 0`);
 } catch (_) {}
 
 // ---------- Seed: αν δεν υπάρχει κανένα shop, βάλε ένα demo με 2 barbers ----------
@@ -316,7 +318,9 @@ function updateShopSubscription(id, fields) {
     monthly_per_barber_eur = COALESCE(?, monthly_per_barber_eur),
     is_active = COALESCE(?, is_active),
     billing_notes = COALESCE(?, billing_notes),
-    contact_email = COALESCE(?, contact_email)
+    contact_email = COALESCE(?, contact_email),
+    admin_phone = COALESCE(?, admin_phone),
+    two_factor_enabled = COALESCE(?, two_factor_enabled)
    WHERE id = ?`;
   return db.prepare(sql).run(
     fields.subscription_status ?? null,
@@ -325,8 +329,14 @@ function updateShopSubscription(id, fields) {
     fields.is_active != null ? (fields.is_active ? 1 : 0) : null,
     fields.billing_notes ?? null,
     fields.contact_email ?? null,
+    fields.admin_phone ?? null,
+    fields.two_factor_enabled != null ? (fields.two_factor_enabled ? 1 : 0) : null,
     id
   );
+}
+
+function findShopByPhone(phone) {
+  return db.prepare(`SELECT * FROM shops WHERE admin_phone = ? LIMIT 1`).get(phone);
 }
 
 function shopStats(shopId) {
@@ -476,7 +486,7 @@ function upsertShopPrice(shopId, haircutType, priceEur) {
 module.exports = {
   // shops
   listShops, getShopBySlug, getShopById, createShop, updateShop, deleteShop, setShopPassword,
-  updateShopSubscription, shopStats, creatorSummary,
+  updateShopSubscription, shopStats, creatorSummary, findShopByPhone,
   // customer history & prices
   getCustomerHistory, listShopPrices, upsertShopPrice,
   // barbers
