@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /welcome.html
+Allow: /features.html
+Allow: /pricing.html
+Disallow: /admin.html
+Disallow: /admin/
+Disallow: /creator.html
+Disallow: /creator/
+Disallow: /api/
+Disallow: /signup.html
+
+Sitemap: https://barbershop-app-production-e102.up.railway.app/sitemap.xml

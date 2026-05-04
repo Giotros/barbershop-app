@@ -87,6 +87,25 @@ app.get('/', (req, res, next) => {
   return res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
 });
 
+// PHP-style URL aliases (πιο SEO-friendly)
+app.get('/welcome', (req, res) => res.sendFile(path.join(__dirname, 'public', 'welcome.html')));
+app.get('/features', (req, res) => res.sendFile(path.join(__dirname, 'public', 'features.html')));
+app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));
+app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public', 'signup.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/creator', (req, res) => res.sendFile(path.join(__dirname, 'public', 'creator.html')));
+app.get('/qr', (req, res) => res.sendFile(path.join(__dirname, 'public', 'qr.html')));
+
+// Admin sub-routes — ίδιο HTML αλλά διαφορετικό URL για bookmarks/SEO
+app.get('/admin/today', (req, res) => res.redirect('/admin.html?page=today' + (req.query.shop ? '&shop=' + req.query.shop : '')));
+app.get('/admin/appointments', (req, res) => res.redirect('/admin.html?page=appts' + (req.query.shop ? '&shop=' + req.query.shop : '')));
+app.get('/admin/schedule', (req, res) => res.redirect('/admin.html?page=schedule' + (req.query.shop ? '&shop=' + req.query.shop : '')));
+app.get('/admin/settings', (req, res) => res.redirect('/admin.html?page=settings' + (req.query.shop ? '&shop=' + req.query.shop : '')));
+
+// Robots & sitemap
+app.get('/robots.txt', (req, res) => res.sendFile(path.join(__dirname, 'public', 'robots.txt')));
+app.get('/sitemap.xml', (req, res) => res.sendFile(path.join(__dirname, 'public', 'sitemap.xml')));
+
 app.use(express.static(path.join(__dirname, 'public'), {
   index: false, // δεν θέλουμε να σερβίρει αυτόματα index.html στο /
   maxAge: PROD ? '1d' : 0,

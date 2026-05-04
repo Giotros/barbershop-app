@@ -3,7 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Barberhub · Σύστημα κρατήσεων για κουρεία</title>
+  <title>Barberhub · Online κρατήσεις για κουρεία στην Ελλάδα</title>
+  <meta name="description" content="Σύστημα ψηφιακών κρατήσεων για κουρεία. QR code στο μαγαζί, αυτόματη διαχείριση ραντεβού από το κινητό σου, ιστορικό πελατών. 7 μέρες δωρεάν δοκιμή.">
+  <meta name="keywords" content="κρατήσεις κουρείο, online ραντεβού, barbershop booking, qr κράτηση, ψηφιακό ημερολόγιο κουρέα">
+  <meta name="author" content="Barberhub">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://barbershop-app-production-e102.up.railway.app/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Barberhub · Online κρατήσεις για κουρεία" />
+  <meta property="og:description" content="Λιγότερα τηλέφωνα. Περισσότερα κουρέματα. Σκάναρε QR, κλείσε ραντεβού σε 30 δευτερόλεπτα." />
+  <meta property="og:url" content="https://barbershop-app-production-e102.up.railway.app/" />
+  <meta property="og:locale" content="el_GR" />
+  <meta property="og:image" content="https://barbershop-app-production-e102.up.railway.app/icon-512.png" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Barberhub · Online κρατήσεις για κουρεία">
+  <meta name="twitter:description" content="Λιγότερα τηλέφωνα. Περισσότερα κουρέματα. 7 μέρες δωρεάν.">
+
+  <!-- Schema.org structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Barberhub",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "15",
+      "priceCurrency": "EUR"
+    }
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -11,7 +46,6 @@
   <meta name="theme-color" content="#f6f5f2" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-  <meta name="description" content="Φτιάξε το ψηφιακό σύστημα κρατήσεων του κουρείου σου σε 60 δευτερόλεπτα. QR code, online booking, διαχείριση πελατών.">
   <style>
     .nav-bar {
       position: sticky; top: 0; z-index: 30;
@@ -151,11 +185,11 @@
       <span>Barberhub</span>
     </a>
     <div class="nav-links">
-      <a href="/features.html">Δυνατότητες</a>
-      <a href="/pricing.html">Τιμές</a>
-      <a href="/admin.html">Είσοδος</a>
+      <a href="/features">Δυνατότητες</a>
+      <a href="/pricing">Τιμές</a>
+      <a href="/admin">Είσοδος</a>
     </div>
-    <a href="/pricing.html" class="btn small">Ξεκίνα δωρεάν</a>
+    <a href="/pricing" class="btn small">Ξεκίνα δωρεάν</a>
   </nav>
 
   <section class="marketing">
@@ -164,8 +198,8 @@
       <h1>Λιγότερα τηλέφωνα. <span class="accent">Περισσότερα κουρέματα.</span></h1>
       <p>Ο πελάτης σου σκανάρει το QR. Κλείνει ραντεβού σε 30 δευτερόλεπτα. Εσύ εγκρίνεις από το κινητό. Τέλος στις άσκοπες κλήσεις και τα μπερδέματα.</p>
       <div class="hero-cta">
-        <a href="/pricing.html" class="btn">Ξεκίνα δωρεάν δοκιμή</a>
-        <a href="/features.html" class="btn ghost">Δες πώς δουλεύει</a>
+        <a href="/pricing" class="btn">Ξεκίνα δωρεάν δοκιμή</a>
+        <a href="/features" class="btn ghost">Δες πώς δουλεύει</a>
       </div>
       <p class="muted small" style="margin-top: 18px">Χωρίς κάρτα. Χωρίς δέσμευση. 7 μέρες δωρεάν.</p>
     </div>
@@ -248,12 +282,12 @@
     <div class="cta-section">
       <h2>Έτοιμος να ξεκινήσεις;</h2>
       <p>7 ημέρες δωρεάν. Δεν ζητάμε κάρτα. Χωρίς δέσμευση.</p>
-      <a href="/pricing.html" class="btn">Φτιάξε λογαριασμό</a>
+      <a href="/pricing" class="btn">Φτιάξε λογαριασμό</a>
     </div>
   </section>
 
   <footer class="footer">
-    <p>© 2026 Barberhub · <a href="/features.html">Δυνατότητες</a> · <a href="/pricing.html">Τιμές</a> · <a href="/admin.html">Είσοδος</a></p>
+    <p>© 2026 Barberhub · <a href="/features">Δυνατότητες</a> · <a href="/pricing">Τιμές</a> · <a href="/admin">Είσοδος</a></p>
   </footer>
 
   <script>

@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Admin · Barberhub</title>
+  <title>Διαχείριση κουρείου · Barberhub</title>
+  <meta name="description" content="Διαχείριση ραντεβού, προγράμματος και πελατών για το κουρείο σου. Σύνδεση με κινητό και κωδικό.">
+  <meta name="robots" content="noindex, nofollow">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -569,6 +571,8 @@
     await loadAll();
     // Προσάρτηση date hints σε όλα τα date inputs
     ['schedDate','filterDate','m_date','na_date','confirmedDate'].forEach(attachDateHint);
+    // Switch σε αρχική page (από URL)
+    if (window.__initialPage) switchToPage(window.__initialPage, false);
     requestNotifPermission();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
     setInterval(loadCounts, 30000);
@@ -872,17 +876,40 @@
 
   /* ============ Tabs ============ */
   function currentPage() { return document.querySelector('.nav-item.active')?.dataset.page; }
-  document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-    n.classList.add('active');
-    const which = n.dataset.page;
+  // URL routing — κάθε tab έχει δικό URL (?page=today / ?page=appts κλπ)
+  const PAGE_TITLES = {
+    today: 'Σήμερα · Διαχείριση κουρείου',
+    appts: 'Ραντεβού · Διαχείριση κουρείου',
+    schedule: 'Πρόγραμμα · Διαχείριση κουρείου',
+    settings: 'Ρυθμίσεις · Διαχείριση κουρείου',
+  };
+  function switchToPage(which, push = true) {
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.page === which));
     ['today','appts','schedule','settings'].forEach(p => $('page-'+p).style.display = (p === which ? 'block' : 'none'));
     if (which === 'today') loadToday();
     if (which === 'appts') loadPending();
     if (which === 'schedule') loadScheduleData();
     if (which === 'settings') updateBookingUrl();
-    haptic();
+    // Update URL + title
+    if (push) {
+      const url = new URL(location.href);
+      url.searchParams.set('page', which);
+      history.pushState({ page: which }, '', url.toString());
+    }
+    document.title = PAGE_TITLES[which] || 'Διαχείριση · Barberhub';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => {
+    haptic();
+    switchToPage(n.dataset.page);
+  });
+  // Initialize from URL
+  const initialPage = new URLSearchParams(location.search).get('page') || 'today';
+  // Note: showMain() θα τρέξει switchToPage μετά το login
+  window.__initialPage = initialPage;
+  window.addEventListener('popstate', (e) => {
+    const p = (new URLSearchParams(location.search)).get('page') || 'today';
+    switchToPage(p, false);
   });
   document.querySelectorAll('[data-atab]').forEach(t => t.onclick = () => {
     document.querySelectorAll('[data-atab]').forEach(x => x.classList.remove('active'));
