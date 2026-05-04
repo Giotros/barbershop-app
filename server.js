@@ -216,32 +216,32 @@ app.get('/api/config', (req, res) => {
 });
 
 // ---------- shops ----------
-app.get('/api/shops', (req, res) => {
-  res.json(db.listShops());
+app.get('/api/shops', async (req, res) => {
+  res.json(await db.listShops());
 });
 
-app.get('/api/shops/:slug', (req, res) => {
-  const shop = db.getShopBySlug(req.params.slug);
+app.get('/api/shops/:slug', async (req, res) => {
+  const shop = await db.getShopBySlug(req.params.slug);
   if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
-  const barbers = db.listBarbersByShopSlug(req.params.slug).map(b => ({
+  const barbers = (await db.listBarbersByShopSlug(req.params.slug)).map(b => ({
     ...b,
     default_capacity: defaultCapFromBarber(b),
     avg_minutes: b.avg_minutes || 30,
   }));
-  const prices = db.listShopPrices(shop.id);
+  const prices = await db.listShopPrices(shop.id);
   res.json({ shop, barbers, prices });
 });
 
 // ---------- barber availability (per-hour color coding) ----------
-app.get('/api/shops/:shopSlug/barbers/:barberSlug/availability', (req, res) => {
+app.get('/api/shops/:shopSlug/barbers/:barberSlug/availability', async (req, res) => {
   const { shopSlug, barberSlug } = req.params;
   const { date } = req.query;
   if (!isValidDate(date)) return res.status(400).json({ error: 'Μη έγκυρη ημερομηνία' });
-  const barber = db.getBarberBySlug(shopSlug, barberSlug);
+  const barber = await db.getBarberBySlug(shopSlug, barberSlug);
   if (!barber) return res.status(404).json({ error: 'Δεν βρέθηκε ο κουρέας.' });
 
-  const dayOv = db.getDayOverride(barber.id, date);
-  const hourOvList = db.listHourOverrides(barber.id, date);
+  const dayOv = await db.getDayOverride(barber.id, date);
+  const hourOvList = await db.listHourOverrides(barber.id, date);
   const hourOvMap = {};
   for (const h of hourOvList) hourOvMap[String(h.hour).padStart(2,'0')] = h;
 
@@ -251,8 +251,8 @@ app.get('/api/shops/:shopSlug/barbers/:barberSlug/availability', (req, res) => {
   const slots = [];
   for (const shift of shifts) slots.push(...generateHalfSlots(shift.open, shift.close));
 
-  const confirmedByHour = db.countConfirmedByHour(barber.id, date);
-  const pendingByHour = db.countPendingByHour(barber.id, date);
+  const confirmedByHour = await db.countConfirmedByHour(barber.id, date);
+  const pendingByHour = await db.countPendingByHour(barber.id, date);
   const isToday = date === todayISO();
   const nowHHMM = new Date().toTimeString().slice(0, 5);
 
@@ -280,9 +280,9 @@ app.get('/api/shops/:shopSlug/barbers/:barberSlug/availability', (req, res) => {
 });
 
 // ---------- create appointment request ----------
-app.post('/api/shops/:shopSlug/barbers/:barberSlug/appointments', bookingLimiter, (req, res) => {
+app.post('/api/shops/:shopSlug/barbers/:barberSlug/appointments', bookingLimiter, async (req, res) => {
   const { shopSlug, barberSlug } = req.params;
-  const barber = db.getBarberBySlug(shopSlug, barberSlug);
+  const barber = await db.getBarberBySlug(shopSlug, barberSlug);
   if (!barber) return res.status(404).json({ error: 'Δεν βρέθηκε ο κουρέας.' });
 
   // Sanitization: αφαίρεση επικίνδυνων chars + length limit
@@ -307,8 +307,8 @@ app.post('/api/shops/:shopSlug/barbers/:barberSlug/appointments', bookingLimiter
   }
 
   // Έλεγχος ότι η μέρα δεν είναι ρεπό (από day_override ή weekly schedule)
-  const dayOv = db.getDayOverride(barber.id, date);
-  const hourOvList = db.listHourOverrides(barber.id, date);
+  const dayOv = await db.getDayOverride(barber.id, date);
+  const hourOvList = await db.listHourOverrides(barber.id, date);
   const hourOvMap = {};
   for (const h of hourOvList) hourOvMap[String(h.hour).padStart(2,'0')] = h;
 
@@ -326,10 +326,10 @@ app.post('/api/shops/:shopSlug/barbers/:barberSlug/appointments', bookingLimiter
   const hh = time.slice(0,2);
   const { capacity, blocked } = effectiveCapacityForHour({ barber, dayOv, hourOv: hourOvMap[hh] });
   if (blocked) return res.status(409).json({ error: 'Αυτή η ώρα είναι κλειστή.' });
-  const confirmed = (db.countConfirmedByHour(barber.id, date)[hh] || 0);
+  const confirmed = ((await db.countConfirmedByHour(barber.id, date))[hh] || 0);
   if (confirmed >= capacity) return res.status(409).json({ error: 'Δεν υπάρχει διαθεσιμότητα στη συγκεκριμένη ώρα.' });
 
-  const appt = db.createAppointmentRequest({
+  const appt = await db.createAppointmentRequest({
     barber_id: barber.id,
     customer_name: name, customer_phone: phone, customer_email: email,
     haircut_type: haircutType,
@@ -428,9 +428,9 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
 });
 
 // Login για συγκεκριμένο κουρείο (shop owner) — phone + password (no 2FA)
-app.post('/api/shops/:slug/login', loginLimiter, (req, res) => {
+app.post('/api/shops/:slug/login', loginLimiter, async (req, res) => {
   const { phone, password } = req.body || {};
-  const shop = db.getShopBySlug(req.params.slug);
+  const shop = await db.getShopBySlug(req.params.slug);
   if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   if (!shop.admin_password_hash) return res.status(403).json({ error: 'Δεν έχει οριστεί κωδικός για το κατάστημα.' });
 
@@ -469,20 +469,20 @@ app.get('/api/admin/me', (req, res) => {
 const requireAdmin = requireAuth;
 
 // ---------- admin: shops ----------
-app.get('/api/admin/shops', requireAdmin, (req, res) => res.json(db.listShops()));
-app.post('/api/admin/shops', requireAdmin, (req, res) => {
+app.get('/api/admin/shops', requireAdmin, async (req, res) => res.json(await db.listShops()));
+app.post('/api/admin/shops', requireAdmin, async (req, res) => {
   const { slug, name, address, phone } = req.body || {};
   if (!slug || !name) return res.status(400).json({ error: 'Slug και όνομα απαιτούνται.' });
   try {
-    const r = db.createShop({ slug: slug.trim().toLowerCase(), name: name.trim(), address, phone });
+    const r = await db.createShop({ slug: slug.trim().toLowerCase(), name: name.trim(), address, phone });
     res.json({ ok: true, id: r.lastInsertRowid });
   } catch (e) { res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' }); }
 });
-app.put('/api/admin/shops/:id', requireAdmin, (req, res) => {
+app.put('/api/admin/shops/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { slug, name, address, phone, google_place_id, google_maps_url } = req.body || {};
   try {
-    db.updateShop(id, {
+    await db.updateShop(id, {
       slug: slug.trim().toLowerCase(), name: name.trim(),
       address, phone,
       google_place_id: google_place_id || '',
@@ -491,34 +491,32 @@ app.put('/api/admin/shops/:id', requireAdmin, (req, res) => {
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.delete('/api/admin/shops/:id', requireSuperAdmin, (req, res) => {
-  db.deleteShop(Number(req.params.id));
+app.delete('/api/admin/shops/:id', requireSuperAdmin, async (req, res) => {
+  await db.deleteShop(Number(req.params.id));
   res.json({ ok: true });
 });
 
 // Αλλαγή κωδικού καταστήματος
-app.post('/api/admin/shops/:id/change-password', requireAdmin, (req, res) => {
+app.post('/api/admin/shops/:id/change-password', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  // Μόνο super admin ή ο ίδιος ο shop owner του shop
   if (req.session.role === 'shop' && req.session.shopId !== id) {
     return res.status(403).json({ error: 'Δεν έχεις δικαιώματα.' });
   }
   const newPwd = String(req.body?.new_password || '');
   if (newPwd.length < 8) return res.status(400).json({ error: 'Ο κωδικός θέλει τουλάχιστον 8 χαρακτήρες.' });
-  // Αν είναι shop role, ελέγχεται και current password
   if (req.session.role === 'shop') {
-    const shop = db.getShopById(id);
+    const shop = await db.getShopById(id);
     if (!auth.verifyPassword(req.body?.current_password, shop.admin_password_hash)) {
       return res.status(401).json({ error: 'Λάθος τρέχων κωδικός.' });
     }
   }
-  db.setShopPassword(id, auth.hashPassword(newPwd));
+  await db.setShopPassword(id, auth.hashPassword(newPwd));
   res.json({ ok: true });
 });
 
 // ---------- admin: barbers ----------
-app.get('/api/admin/shops/:shopId/barbers', requireAdmin, (req, res) => {
-  res.json(db.listBarbersByShop(Number(req.params.shopId), true));
+app.get('/api/admin/shops/:shopId/barbers', requireAdmin, async (req, res) => {
+  res.json(await db.listBarbersByShop(Number(req.params.shopId), true));
 });
 function normalizeWeeklySchedule(input) {
   // Accepts array of 7 items: { blocked, shifts: [{open,close}, ...] }
@@ -549,19 +547,19 @@ function normalizeWeeklySchedule(input) {
   return '';
 }
 
-app.post('/api/admin/shops/:shopId/barbers', requireAdmin, (req, res) => {
+app.post('/api/admin/shops/:shopId/barbers', requireAdmin, async (req, res) => {
   const shopId = Number(req.params.shopId);
   const b = req.body || {};
   if (!b.slug || !b.name) return res.status(400).json({ error: 'Slug και όνομα απαιτούνται.' });
   try {
-    const r = db.createBarber({
+    const r = await db.createBarber({
       ...b, shop_id: shopId, slug: b.slug.trim().toLowerCase(),
       weekly_schedule: normalizeWeeklySchedule(b.weekly_schedule),
     });
     res.json({ ok: true, id: r.lastInsertRowid });
   } catch (e) { res.status(409).json({ error: 'Αυτό το slug υπάρχει στο κατάστημα.' }); }
 });
-app.put('/api/admin/barbers/:id', requireAdmin, (req, res) => {
+app.put('/api/admin/barbers/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const b = req.body || {};
   try {
@@ -569,63 +567,63 @@ app.put('/api/admin/barbers/:id', requireAdmin, (req, res) => {
     if (typeof b.slug === 'string' && b.slug.trim()) update.slug = b.slug.trim().toLowerCase();
     else delete update.slug;
     if (b.weekly_schedule !== undefined) update.weekly_schedule = normalizeWeeklySchedule(b.weekly_schedule);
-    db.updateBarber(id, update);
+    await db.updateBarber(id, update);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.delete('/api/admin/barbers/:id', requireAdmin, (req, res) => {
-  db.deleteBarber(Number(req.params.id));
+app.delete('/api/admin/barbers/:id', requireAdmin, async (req, res) => {
+  await db.deleteBarber(Number(req.params.id));
   res.json({ ok: true });
 });
 
 // ---------- admin: capacity overrides ----------
-app.get('/api/admin/barbers/:id/day/:date', requireAdmin, (req, res) => {
+app.get('/api/admin/barbers/:id/day/:date', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const date = req.params.date;
   if (!isValidDate(date)) return res.status(400).json({ error: 'Μη έγκυρη ημ.' });
   res.json({
-    day: db.getDayOverride(id, date) || null,
-    hours: db.listHourOverrides(id, date),
+    day: (await db.getDayOverride(id, date)) || null,
+    hours: await db.listHourOverrides(id, date),
   });
 });
-app.put('/api/admin/barbers/:id/day/:date', requireAdmin, (req, res) => {
+app.put('/api/admin/barbers/:id/day/:date', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const date = req.params.date;
   if (!isValidDate(date)) return res.status(400).json({ error: 'Μη έγκυρη ημ.' });
-  db.upsertDayOverride(id, date, req.body || {});
+  await db.upsertDayOverride(id, date, req.body || {});
   res.json({ ok: true });
 });
-app.delete('/api/admin/barbers/:id/day/:date', requireAdmin, (req, res) => {
-  db.deleteDayOverride(Number(req.params.id), req.params.date);
+app.delete('/api/admin/barbers/:id/day/:date', requireAdmin, async (req, res) => {
+  await db.deleteDayOverride(Number(req.params.id), req.params.date);
   res.json({ ok: true });
 });
-app.put('/api/admin/barbers/:id/hour', requireAdmin, (req, res) => {
+app.put('/api/admin/barbers/:id/hour', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { date, hour } = req.body || {};
   if (!isValidDate(date) || hour == null) return res.status(400).json({ error: 'Λείπει date/hour.' });
-  db.upsertHourOverride(id, date, Number(hour), req.body);
+  await db.upsertHourOverride(id, date, Number(hour), req.body);
   res.json({ ok: true });
 });
-app.delete('/api/admin/barbers/:id/hour', requireAdmin, (req, res) => {
+app.delete('/api/admin/barbers/:id/hour', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { date, hour } = req.body || {};
-  db.deleteHourOverride(id, date, Number(hour));
+  await db.deleteHourOverride(id, date, Number(hour));
   res.json({ ok: true });
 });
 
 // ---------- admin: appointments ----------
-app.get('/api/admin/shops/:shopId/appointments', requireAdmin, (req, res) => {
+app.get('/api/admin/shops/:shopId/appointments', requireAdmin, async (req, res) => {
   const shopId = Number(req.params.shopId);
   const { date, status } = req.query;
-  let list = (date && isValidDate(date)) ? db.listByShopAndDate(shopId, date) : db.listUpcomingForShop(shopId);
+  let list = (date && isValidDate(date)) ? await db.listByShopAndDate(shopId, date) : await db.listUpcomingForShop(shopId);
   if (status) {
     const allow = String(status).split(',').map((s) => s.trim());
     list = list.filter((a) => allow.includes(a.status));
   }
   res.json(list);
 });
-app.get('/api/admin/shops/:shopId/counts', requireAdmin, (req, res) => {
-  const list = db.listUpcomingForShop(Number(req.params.shopId));
+app.get('/api/admin/shops/:shopId/counts', requireAdmin, async (req, res) => {
+  const list = await db.listUpcomingForShop(Number(req.params.shopId));
   res.json({
     pending: list.filter((a) => a.status === 'pending').length,
     confirmed: list.filter((a) => a.status === 'confirmed').length,
@@ -633,22 +631,21 @@ app.get('/api/admin/shops/:shopId/counts', requireAdmin, (req, res) => {
   });
 });
 
-app.post('/api/admin/appointments/:id/approve', requireAdmin, (req, res) => {
+app.post('/api/admin/appointments/:id/approve', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const cur = db.getAppointment(id);
+  const cur = await db.getAppointment(id);
   if (!cur) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
-  // Έλεγχος capacity: αν είναι στην ίδια ώρα και έχει γεμίσει, μην το εγκρίνεις
-  const barber = db.getBarberById(cur.barber_id);
+  const barber = await db.getBarberById(cur.barber_id);
   const hh = cur.appointment_time.slice(0, 2);
-  const dayOv = db.getDayOverride(barber.id, cur.appointment_date);
-  const hourOvList = db.listHourOverrides(barber.id, cur.appointment_date);
+  const dayOv = await db.getDayOverride(barber.id, cur.appointment_date);
+  const hourOvList = await db.listHourOverrides(barber.id, cur.appointment_date);
   const hourOv = hourOvList.find((h) => String(h.hour).padStart(2,'0') === hh);
   const { capacity, blocked } = effectiveCapacityForHour({ barber, dayOv, hourOv });
-  const confirmedNow = db.countConfirmedByHour(barber.id, cur.appointment_date)[hh] || 0;
+  const confirmedNow = (await db.countConfirmedByHour(barber.id, cur.appointment_date))[hh] || 0;
   if (blocked) return res.status(409).json({ error: 'Αυτή η ώρα είναι κλειστή.' });
   if (confirmedNow >= capacity) return res.status(409).json({ error: `Έχεις ήδη ${confirmedNow}/${capacity} ραντεβού αυτή την ώρα.` });
 
-  const appt = db.setAppointmentStatus(id, 'confirmed');
+  const appt = await db.setAppointmentStatus(id, 'confirmed');
   sendSMS(appt.customer_phone, buildConfirmationMessage(appt)).catch(() => {});
   if (appt.customer_email) {
     const e = buildConfirmationEmail(appt);
@@ -657,25 +654,25 @@ app.post('/api/admin/appointments/:id/approve', requireAdmin, (req, res) => {
   res.json({ ok: true, appointment: appt });
 });
 
-app.post('/api/admin/appointments/:id/decline', requireAdmin, (req, res) => {
+app.post('/api/admin/appointments/:id/decline', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const appt = db.setAppointmentStatus(id, 'declined');
+  const appt = await db.setAppointmentStatus(id, 'declined');
   if (!appt) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   sendSMS(appt.customer_phone, buildDeclineMessage(appt)).catch(() => {});
   res.json({ ok: true, appointment: appt });
 });
 
-app.post('/api/admin/appointments/:id/cancel', requireAdmin, (req, res) => {
+app.post('/api/admin/appointments/:id/cancel', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const appt = db.setAppointmentStatus(id, 'cancelled');
+  const appt = await db.setAppointmentStatus(id, 'cancelled');
   if (!appt) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   sendSMS(appt.customer_phone, buildCancelMessage(appt)).catch(() => {});
   res.json({ ok: true, appointment: appt });
 });
 
-app.put('/api/admin/appointments/:id', requireAdmin, (req, res) => {
+app.put('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const cur = db.getAppointment(id);
+  const cur = await db.getAppointment(id);
   if (!cur) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   const a = {
     customer_name: (req.body.name ?? cur.customer_name).trim(),
@@ -685,7 +682,7 @@ app.put('/api/admin/appointments/:id', requireAdmin, (req, res) => {
     appointment_time: req.body.time || cur.appointment_time,
     notes: req.body.notes ?? cur.notes ?? '',
   };
-  const updated = db.updateAppointment(id, a);
+  const updated = await db.updateAppointment(id, a);
   sendSMS(updated.customer_phone, buildUpdateMessage(updated)).catch(() => {});
   if (updated.customer_email) {
     const e = buildUpdateEmail(updated);
@@ -695,20 +692,20 @@ app.put('/api/admin/appointments/:id', requireAdmin, (req, res) => {
 });
 
 // Νέο ραντεβού από κουρέα (απευθείας confirmed)
-app.post('/api/admin/barbers/:id/appointments', requireAdmin, (req, res) => {
+app.post('/api/admin/barbers/:id/appointments', requireAdmin, async (req, res) => {
   const barberId = Number(req.params.id);
-  const barber = db.getBarberById(barberId);
+  const barber = await db.getBarberById(barberId);
   if (!barber) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   const { name, phone, email = '', haircutType = '', date, time, notes = '' } = req.body || {};
   if (!name || !phone || !isValidDate(date) || !isValidTime(time)) {
     return res.status(400).json({ error: 'Συμπληρώστε όλα τα πεδία.' });
   }
-  const appt = db.createAppointmentRequest({
+  const appt = await db.createAppointmentRequest({
     barber_id: barberId,
     customer_name: name.trim(), customer_phone: phone.trim(), customer_email: email.trim(),
     haircut_type: haircutType, appointment_date: date, appointment_time: time, notes,
   });
-  const approved = db.setAppointmentStatus(appt.id, 'confirmed');
+  const approved = await db.setAppointmentStatus(appt.id, 'confirmed');
   sendSMS(approved.customer_phone, buildConfirmationMessage(approved)).catch(() => {});
   if (approved.customer_email) {
     const e = buildConfirmationEmail(approved);
@@ -724,17 +721,16 @@ function normalizePhoneCmp(p) {
   if (/^69\d{8}$/.test(v)) v = '+30' + v;
   return v;
 }
-app.get('/api/admin/shops/:shopId/customers/:phone', requireAdmin, (req, res) => {
+app.get('/api/admin/shops/:shopId/customers/:phone', requireAdmin, async (req, res) => {
   const shopId = Number(req.params.shopId);
   const phone = decodeURIComponent(req.params.phone).trim();
-  // Δοκίμασε και τις δύο μορφές (με/χωρίς +30)
   const variants = [phone, normalizePhoneCmp(phone), phone.replace(/^\+30/, ''), phone.replace(/[\s\-()]/g, '')];
   const seen = new Set();
   const merged = [];
   for (const v of variants) {
     if (!v || seen.has(v)) continue;
     seen.add(v);
-    const h = db.getCustomerHistory(shopId, v);
+    const h = await db.getCustomerHistory(shopId, v);
     for (const a of h.all) {
       if (!merged.find(x => x.id === a.id)) merged.push(a);
     }
@@ -753,22 +749,22 @@ app.get('/api/admin/shops/:shopId/customers/:phone', requireAdmin, (req, res) =>
 });
 
 // ---------- prices ----------
-app.get('/api/shops/:slug/prices', (req, res) => {
-  const shop = db.getShopBySlug(req.params.slug);
+app.get('/api/shops/:slug/prices', async (req, res) => {
+  const shop = await db.getShopBySlug(req.params.slug);
   if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
-  res.json(db.listShopPrices(shop.id));
+  res.json(await db.listShopPrices(shop.id));
 });
-app.put('/api/admin/shops/:id/prices', requireAdmin, (req, res) => {
+app.put('/api/admin/shops/:id/prices', requireAdmin, async (req, res) => {
   const shopId = Number(req.params.id);
-  const items = req.body?.prices || []; // [{haircut_type, price_eur}, ...]
+  const items = req.body?.prices || [];
   for (const it of items) {
-    db.upsertShopPrice(shopId, it.haircut_type, Number(it.price_eur) || 0);
+    await db.upsertShopPrice(shopId, it.haircut_type, Number(it.price_eur) || 0);
   }
   res.json({ ok: true });
 });
 
 // ---------- self-service signup ----------
-app.post('/api/signup', signupLimiter, (req, res) => {
+app.post('/api/signup', signupLimiter, async (req, res) => {
   const shop_name = sanitizeStr(req.body?.shop_name, 80);
   const slug = sanitizeSlug(req.body?.shop_slug);
   const address = sanitizeStr(req.body?.address, 160);
@@ -781,18 +777,17 @@ app.post('/api/signup', signupLimiter, (req, res) => {
   }
   if (password.length < 8) return res.status(400).json({ error: 'Ο κωδικός θέλει τουλάχιστον 8 χαρακτήρες.' });
   if (slug.length < 3) return res.status(400).json({ error: 'Το URL slug πρέπει να έχει 3+ χαρακτήρες.' });
-  if (db.getShopBySlug(slug)) return res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' });
+  if (await db.getShopBySlug(slug)) return res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' });
 
   try {
-    // Bcrypt hash για το password (12 rounds)
     const password_hash = auth.hashPassword(password);
-    const r = db.createShop({
+    const r = await db.createShop({
       slug, name: shop_name, address, phone,
       admin_password_hash: password_hash,
     });
     const shopId = r.lastInsertRowid;
     const barberSlug = sanitizeSlug(barber_name);
-    db.createBarber({
+    await db.createBarber({
       shop_id: shopId, slug: barberSlug || 'barber',
       name: barber_name,
       default_capacity: 2, avg_minutes: 30,
@@ -816,7 +811,7 @@ app.post('/api/signup', signupLimiter, (req, res) => {
 // ---------- Google Places API (φωτογραφίες/reviews/info από GBP) ----------
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 app.get('/api/shops/:slug/google', async (req, res) => {
-  const shop = db.getShopBySlug(req.params.slug);
+  const shop = await db.getShopBySlug(req.params.slug);
   if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   if (!shop.google_place_id || !GOOGLE_API_KEY) {
     return res.json({ enabled: false });
@@ -835,9 +830,8 @@ app.get('/api/shops/:slug/google', async (req, res) => {
 // ============ CREATOR DASHBOARD API ============
 // Όλα απαιτούν super-admin (creator) auth.
 
-app.get('/api/creator/summary', requireSuperAdmin, (req, res) => {
-  const data = db.creatorSummary();
-  // Ενημερώστε με URLs για κάθε shop
+app.get('/api/creator/summary', requireSuperAdmin, async (req, res) => {
+  const data = await db.creatorSummary();
   data.shops = data.shops.map(s => ({
     ...s,
     booking_url: `${PUBLIC_URL}/?shop=${encodeURIComponent(s.slug)}`,
@@ -847,7 +841,7 @@ app.get('/api/creator/summary', requireSuperAdmin, (req, res) => {
   res.json(data);
 });
 
-app.post('/api/creator/shops', requireSuperAdmin, (req, res) => {
+app.post('/api/creator/shops', requireSuperAdmin, async (req, res) => {
   const name = sanitizeStr(req.body?.name, 80);
   const slug = sanitizeSlug(req.body?.slug || req.body?.name);
   const address = sanitizeStr(req.body?.address, 160);
@@ -864,17 +858,17 @@ app.post('/api/creator/shops', requireSuperAdmin, (req, res) => {
     return res.status(400).json({ error: 'Συμπλήρωσε όνομα, slug και password.' });
   }
   if (password.length < 8) return res.status(400).json({ error: 'Ο κωδικός θέλει 8+ χαρακτήρες.' });
-  if (db.getShopBySlug(slug)) return res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' });
+  if (await db.getShopBySlug(slug)) return res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' });
 
   try {
-    const r = db.createShop({
+    const r = await db.createShop({
       slug, name, address, phone, contact_email,
       admin_password_hash: auth.hashPassword(password),
     });
     const shopId = r.lastInsertRowid;
-    db.updateShopSubscription(shopId, { subscription_status, monthly_per_barber_eur, contact_email, admin_phone, two_factor_enabled });
+    await db.updateShopSubscription(shopId, { subscription_status, monthly_per_barber_eur, contact_email, admin_phone, two_factor_enabled });
     if (barber_name) {
-      db.createBarber({
+      await db.createBarber({
         shop_id: shopId, slug: sanitizeSlug(barber_name) || 'barber',
         name: barber_name, default_capacity: 2, avg_minutes: 30,
         open_hour: 9, close_hour: 20, sort_order: 1,
@@ -887,14 +881,13 @@ app.post('/api/creator/shops', requireSuperAdmin, (req, res) => {
   }
 });
 
-app.patch('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
+app.patch('/api/creator/shops/:id', requireSuperAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const shop = db.getShopById(id);
+  const shop = await db.getShopById(id);
   if (!shop) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
 
-  // Update basic info
   if (req.body.name || req.body.address != null || req.body.phone != null || req.body.slug) {
-    db.updateShop(id, {
+    await db.updateShop(id, {
       slug: req.body.slug ? sanitizeSlug(req.body.slug) : shop.slug,
       name: sanitizeStr(req.body.name, 80) || shop.name,
       address: req.body.address != null ? sanitizeStr(req.body.address, 160) : shop.address,
@@ -904,8 +897,7 @@ app.patch('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
       google_maps_url: shop.google_maps_url,
     });
   }
-  // Update subscription
-  db.updateShopSubscription(id, {
+  await db.updateShopSubscription(id, {
     subscription_status: req.body.subscription_status,
     subscription_period_end: req.body.subscription_period_end,
     monthly_per_barber_eur: req.body.monthly_per_barber_eur != null ? Number(req.body.monthly_per_barber_eur) : null,
@@ -918,29 +910,28 @@ app.patch('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/creator/shops/:id/reset-password', requireSuperAdmin, (req, res) => {
+app.post('/api/creator/shops/:id/reset-password', requireSuperAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const newPwd = String(req.body?.password || '');
   if (newPwd.length < 8) return res.status(400).json({ error: 'Κωδικός 8+ χαρακτήρες.' });
-  if (!db.getShopById(id)) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
-  db.setShopPassword(id, auth.hashPassword(newPwd));
+  if (!(await db.getShopById(id))) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
+  await db.setShopPassword(id, auth.hashPassword(newPwd));
   res.json({ ok: true });
 });
 
-app.delete('/api/creator/shops/:id', requireSuperAdmin, (req, res) => {
-  db.deleteShop(Number(req.params.id));
+app.delete('/api/creator/shops/:id', requireSuperAdmin, async (req, res) => {
+  await db.deleteShop(Number(req.params.id));
   res.json({ ok: true });
 });
 
-// Add barber to existing shop
-app.post('/api/creator/shops/:id/barbers', requireSuperAdmin, (req, res) => {
+app.post('/api/creator/shops/:id/barbers', requireSuperAdmin, async (req, res) => {
   const shopId = Number(req.params.id);
-  if (!db.getShopById(shopId)) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
+  if (!(await db.getShopById(shopId))) return res.status(404).json({ error: 'Δεν βρέθηκε.' });
   const name = sanitizeStr(req.body?.name, 60);
   const slug = sanitizeSlug(req.body?.slug || name);
   if (!name || !slug) return res.status(400).json({ error: 'Όνομα και slug απαιτούνται.' });
   try {
-    const r = db.createBarber({
+    const r = await db.createBarber({
       shop_id: shopId, slug, name,
       bio: sanitizeStr(req.body?.bio, 100),
       default_capacity: Number(req.body?.default_capacity) || 2,
@@ -955,13 +946,13 @@ app.post('/api/creator/shops/:id/barbers', requireSuperAdmin, (req, res) => {
   }
 });
 
-app.delete('/api/creator/barbers/:id', requireSuperAdmin, (req, res) => {
-  db.deleteBarber(Number(req.params.id));
+app.delete('/api/creator/barbers/:id', requireSuperAdmin, async (req, res) => {
+  await db.deleteBarber(Number(req.params.id));
   res.json({ ok: true });
 });
 
-app.get('/api/creator/shops/:id/barbers', requireSuperAdmin, (req, res) => {
-  res.json(db.listBarbersByShop(Number(req.params.id), true));
+app.get('/api/creator/shops/:id/barbers', requireSuperAdmin, async (req, res) => {
+  res.json(await db.listBarbersByShop(Number(req.params.id), true));
 });
 
 // ---------- QR (per shop ή generic) ----------

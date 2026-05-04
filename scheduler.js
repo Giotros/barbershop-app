@@ -13,7 +13,7 @@ function appointmentDateTime(a) {
 }
 
 async function checkAndSendReminders() {
-  const due = db.findDueForReminder();
+  const due = await db.findDueForReminder();
   if (!due.length) return;
 
   const now = new Date();
@@ -25,13 +25,12 @@ async function checkAndSendReminders() {
     if (diffMin >= min && diffMin <= max) {
       try {
         await sendSMS(a.customer_phone, buildReminderMessage(a));
-        db.markReminderSent(a.id);
+        await db.markReminderSent(a.id);
       } catch (e) {
         console.error(`[scheduler] Αποτυχία υπενθύμισης για appt #${a.id}:`, e.message);
       }
     } else if (diffMin < -5) {
-      // Ραντεβού ήδη πέρασε, μη το ξανακοιτάξεις
-      db.markReminderSent(a.id);
+      await db.markReminderSent(a.id);
     }
   }
 }
