@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Τιμές · Barberhub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <style>
+    .nav-bar { position: sticky; top: 0; z-index: 30; background: rgba(246,245,242,0.85); backdrop-filter: blur(16px); padding: 14px 22px; display: flex; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); }
+    .nav-brand { display: inline-flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; flex: 1; }
+    .nav-brand .mark { width: 28px; height: 28px; border-radius: 7px; background: var(--ink); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px; }
+    .nav-links { display: none; gap: 24px; }
+    .nav-links a { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+    @media (min-width: 720px) { .nav-links { display: flex; } }
+
+    .marketing { max-width: 1100px; margin: 0 auto; padding: 0 22px; }
+    .page-hero { padding: 60px 0 40px; text-align: center; }
+    .page-hero h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 48px; letter-spacing: -0.03em; margin: 0 0 16px; }
+    .page-hero p { color: var(--muted); font-size: 17px; max-width: 580px; margin: 0 auto; }
+    @media (max-width: 720px) { .page-hero h1 { font-size: 32px; } }
+
+    .pricing-grid {
+      display: grid; grid-template-columns: 1fr; gap: 18px;
+      max-width: 1000px; margin: 0 auto 40px;
+    }
+    @media (min-width: 720px) {
+      .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .pricing-card {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--r-lg); padding: 28px;
+      display: flex; flex-direction: column;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--ink); border-width: 2px;
+      transform: scale(1.02);
+    }
+    @media (max-width: 720px) {
+      .pricing-card.featured { transform: none; }
+    }
+    .pricing-card .ribbon {
+      position: absolute; top: -10px; right: 18px;
+      background: var(--ink); color: var(--brand-ink);
+      padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .pricing-card h3 {
+      font-family: 'Fraunces', serif; font-weight: 600;
+      font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em;
+    }
+    .pricing-card .desc { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+    .pricing-card .price {
+      font-family: 'Fraunces', serif; font-weight: 600;
+      font-size: 48px; line-height: 1; letter-spacing: -0.03em;
+      margin: 0;
+    }
+    .pricing-card .price-suffix { font-size: 14px; color: var(--muted); font-weight: 400; }
+    .pricing-card .price-extra {
+      font-size: 13px; color: var(--muted); margin: 4px 0 22px;
+    }
+    .pricing-card ul {
+      list-style: none; padding: 0; margin: 0 0 24px; flex: 1;
+    }
+    .pricing-card li {
+      padding: 10px 0; border-top: 1px solid var(--line);
+      display: flex; gap: 8px; align-items: flex-start; font-size: 14px;
+    }
+    .pricing-card li svg { color: var(--green); flex-shrink: 0; margin-top: 3px; }
+    .pricing-card .cta { margin-top: auto; }
+
+    .faq-section { padding: 60px 0; border-top: 1px solid var(--line); }
+    .faq-section h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 32px; letter-spacing: -0.02em; margin: 0 0 30px; text-align: center; }
+    .faq { max-width: 720px; margin: 0 auto; }
+    .faq-item {
+      padding: 20px 0; border-bottom: 1px solid var(--line);
+    }
+    .faq-item summary {
+      font-weight: 600; font-size: 16px; cursor: pointer;
+      list-style: none; display: flex; justify-content: space-between; align-items: center;
+    }
+    .faq-item summary::after { content: '+'; font-size: 20px; color: var(--muted); }
+    .faq-item[open] summary::after { content: '−'; }
+    .faq-item p { color: var(--muted); margin: 14px 0 0; line-height: 1.6; font-size: 14px; }
+
+    .footer { padding: 40px 22px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* Signup sheet */
+    .signup-sheet { max-width: 500px; margin: 0 auto; padding: 60px 22px; }
+    .signup-sheet h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 28px; margin: 0 0 8px; }
+    .signup-sheet .sub { color: var(--muted); margin: 0 0 24px; }
+    .selected-plan {
+      background: var(--surface-3); border-radius: var(--r-md);
+      padding: 14px 16px; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .selected-plan .name { font-weight: 700; }
+    .selected-plan .amount { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <nav class="nav-bar">
+    <a href="/" class="nav-brand"><span class="mark">B</span><span>Barberhub</span></a>
+    <div class="nav-links">
+      <a href="/features.html">Δυνατότητες</a>
+      <a href="/pricing.html">Τιμές</a>
+      <a href="/admin.html">Είσοδος</a>
+    </div>
+  </nav>
+
+  <!-- PRICING VIEW -->
+  <div class="marketing" id="pricingView">
+    <div class="page-hero">
+      <h1>Απλές τιμές. Χωρίς εκπλήξεις.</h1>
+      <p>Πληρώνεις ανά κουρέα. Όσο μεγαλώνεις, τόσο φθηνότερο γίνεται. Πρώτος μήνας δωρεάν.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- SOLO -->
+      <div class="pricing-card">
+        <h3>Solo</h3>
+        <p class="desc">1 κουρέας · ιδανικό για ατομικά κουρεία</p>
+        <div class="price">€15<span class="price-suffix">/μήνα</span></div>
+        <p class="price-extra">~ €0.50/μέρα</p>
+        <ul>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>1 κουρέας</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Απεριόριστα ραντεβού</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>QR + Google Maps integration</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Email επιβεβαιώσεις</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Ιστορικό πελατών</li>
+        </ul>
+        <button class="btn full ghost cta" data-plan="solo" data-barbers="1" data-amount="15">Επίλεξε Solo</button>
+      </div>
+
+      <!-- DUO (FEATURED) -->
+      <div class="pricing-card featured">
+        <span class="ribbon">Πιο δημοφιλές</span>
+        <h3>Duo</h3>
+        <p class="desc">2 κουρείς · μικρά κουρεία</p>
+        <div class="price">€25<span class="price-suffix">/μήνα</span></div>
+        <p class="price-extra">~ €12.50/κουρέα · 17% έκπτωση</p>
+        <ul>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>2 κουρείς</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Όλα όσα έχει το Solo</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Διαφορετικά πρόγραμμα ανά κουρέα</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Ξεχωριστά QR per κουρέα</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Priority support</li>
+        </ul>
+        <button class="btn full cta" data-plan="duo" data-barbers="2" data-amount="25">Επίλεξε Duo</button>
+      </div>
+
+      <!-- TEAM -->
+      <div class="pricing-card">
+        <h3>Team</h3>
+        <p class="desc">3+ κουρείς · καταστήματα</p>
+        <div class="price">€10<span class="price-suffix">/κουρέα/μήνα</span></div>
+        <p class="price-extra">από €30/μήνα · 33% έκπτωση</p>
+        <ul>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>3 ή περισσότεροι κουρείς</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Όλα όσα έχει το Duo</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Custom URL slug</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Stats / αναφορές</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Telefoniko support</li>
+        </ul>
+        <button class="btn full ghost cta" data-plan="team" data-barbers="3" data-amount="30">Επίλεξε Team</button>
+      </div>
+    </div>
+
+    <p class="muted small center" style="margin: 0 auto 60px">
+      ✓ Πρώτος μήνας δωρεάν · ✓ Άκυρο όποτε θες · ✓ Χωρίς δεσμεύσεις
+    </p>
+
+    <!-- FAQ -->
+    <div class="faq-section">
+      <h2>Συχνές ερωτήσεις</h2>
+      <div class="faq">
+        <details class="faq-item">
+          <summary>Πώς δουλεύει η δωρεάν δοκιμή;</summary>
+          <p>Φτιάχνεις λογαριασμό και χρησιμοποιείς την εφαρμογή κανονικά για 7 μέρες. Δεν παίρνουμε κάρτα — ξεκινάς αμέσως. Στο τέλος της δοκιμής, αν θέλεις να συνεχίσεις, βάζεις στοιχεία πληρωμής.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Τι γίνεται αν θέλω να ακυρώσω;</summary>
+          <p>Ακυρώνεις από το dashboard σου με ένα κλικ. Συνεχίζεις να χρησιμοποιείς την εφαρμογή μέχρι το τέλος της περιόδου που πλήρωσες. Καμία επιπλέον χρέωση.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Αν προσθέσω κουρέα στη μέση του μήνα;</summary>
+          <p>Πληρώνεις pro-rata — δηλαδή μόνο για τις μέρες που τον χρησιμοποίησες αυτόν τον μήνα. Στον επόμενο μήνα η συνδρομή ενημερώνεται κανονικά.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Μπορώ να δοκιμάσω χωρίς να πληρώσω;</summary>
+          <p>Ναι. Φτιάξε λογαριασμό τώρα — δεν ζητάμε στοιχεία πληρωμής. Έχεις πλήρη πρόσβαση για 7 μέρες.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Υπάρχει εφαρμογή για App Store / Play Store;</summary>
+          <p>Δεν χρειάζεται. Η εφαρμογή λειτουργεί ως PWA — εγκαθίσταται στην αρχική οθόνη του κινητού σου σε δευτερόλεπτα από Safari (iPhone) ή Chrome (Android), σαν κανονική app.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Μπορώ να αλλάξω πακέτο μετά;</summary>
+          <p>Ναι, ανά πάσα στιγμή από το dashboard. Αν προσθέσεις/αφαιρέσεις κουρέα, η συνδρομή προσαρμόζεται αυτόματα.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNUP VIEW (hidden initially) -->
+  <div id="signupView" style="display: none">
+    <div class="signup-sheet">
+      <h2>Φτιάξε τον λογαριασμό σου</h2>
+      <p class="sub">7 μέρες δωρεάν. Χωρίς κάρτα. Χωρίς δέσμευση.</p>
+
+      <div class="selected-plan">
+        <div>
+          <div class="name" id="planName">—</div>
+          <div class="muted small" id="planDesc">—</div>
+        </div>
+        <div class="amount" id="planAmount">—</div>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>Όνομα κουρείου</label>
+          <input id="su_name" class="input" type="text" placeholder="π.χ. Passalis Barbershop" />
+        </div>
+        <div class="field">
+          <label>URL slug <span class="muted small">(αυτόματο)</span></label>
+          <input id="su_slug" class="input" type="text" placeholder="passalis-barbershop" />
+          <span class="muted small" style="padding-left: 4px">θα είναι: <span id="urlPreview">…/?shop=…</span></span>
+        </div>
+        <div class="field">
+          <label>Διεύθυνση</label>
+          <input id="su_address" class="input" type="text" />
+        </div>
+        <div class="row">
+          <div class="field" style="margin: 0">
+            <label>Όνομά σου (κουρέας)</label>
+            <input id="su_barber" class="input" type="text" placeholder="π.χ. Γιώργος" />
+          </div>
+          <div class="field" style="margin: 0">
+            <label>Κινητό σου</label>
+            <input id="su_phone" class="input" type="tel" placeholder="6912345678" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input id="su_email" class="input" type="email" placeholder="για επιβεβαίωση + login" />
+        </div>
+        <div class="field">
+          <label>Κωδικός <span class="muted small">(8+ χαρακτήρες)</span></label>
+          <input id="su_password" class="input" type="password" placeholder="ισχυρός κωδικός" />
+        </div>
+        <div id="su_alert" class="alert error" style="display: none; margin-bottom: 12px"></div>
+        <button class="btn full" id="su_btn">Ξεκίνα δωρεάν δοκιμή</button>
+        <p class="muted small center" style="margin-top: 12px">
+          Πατώντας Ξεκίνα συμφωνείς με τους <a href="#" style="color: var(--accent)">Όρους</a> και την <a href="#" style="color: var(--accent)">Πολιτική Απορρήτου</a>.
+        </p>
+      </div>
+
+      <button class="btn ghost full" style="margin-top: 14px" onclick="goBack()">← Επιστροφή στις τιμές</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS VIEW (hidden) -->
+  <div id="successView" style="display: none">
+    <div class="signup-sheet" style="text-align: center">
+      <div style="font-size: 60px; line-height: 1; margin-bottom: 18px">✓</div>
+      <h2>Έτοιμο!</h2>
+      <p class="sub">Ο λογαριασμός σου δημιουργήθηκε. Έχεις 7 μέρες δωρεάν δοκιμή.</p>
+      <div class="card">
+        <div class="field-row" style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid var(--line)">
+          <span class="muted small">Booking URL</span>
+          <a id="successBookingUrl" href="#" target="_blank" style="font-family: monospace; font-size: 12px; color: var(--accent); text-align: right">—</a>
+        </div>
+        <div class="field-row" style="display:flex; justify-content:space-between; padding: 10px 0">
+          <span class="muted small">Admin URL</span>
+          <a id="successAdminUrl" href="#" style="font-family: monospace; font-size: 12px; color: var(--accent); text-align: right">—</a>
+        </div>
+      </div>
+      <a id="successOpenAdmin" href="#" class="btn full" style="margin-top: 18px">Άνοιξε το Dashboard</a>
+    </div>
+  </div>
+
+  <footer class="footer">© 2026 Barberhub</footer>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const slugify = s => String(s||'').toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    let selectedPlan = null;
+
+    document.querySelectorAll('.cta[data-plan]').forEach(btn => btn.onclick = () => {
+      selectedPlan = {
+        plan: btn.dataset.plan,
+        barbers: Number(btn.dataset.barbers),
+        amount: Number(btn.dataset.amount),
+        name: btn.dataset.plan === 'solo' ? 'Solo' : btn.dataset.plan === 'duo' ? 'Duo' : 'Team',
+      };
+      showSignup();
+    });
+
+    function showSignup() {
+      $('pricingView').style.display = 'none';
+      $('signupView').style.display = 'block';
+      $('planName').textContent = selectedPlan.name;
+      $('planDesc').textContent = `${selectedPlan.barbers}${selectedPlan.barbers >= 3 ? '+' : ''} κουρέας · €${selectedPlan.amount}/μήνα μετά τη δοκιμή`;
+      $('planAmount').textContent = `€${selectedPlan.amount}/μήνα`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function goBack() {
+      $('signupView').style.display = 'none';
+      $('pricingView').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    $('su_name').addEventListener('input', () => {
+      if (!$('su_slug').value || $('su_slug').dataset.auto !== 'no') {
+        $('su_slug').value = slugify($('su_name').value);
+        $('su_slug').dataset.auto = 'yes';
+      }
+      updatePreview();
+    });
+    $('su_slug').addEventListener('input', () => {
+      $('su_slug').dataset.auto = 'no';
+      $('su_slug').value = slugify($('su_slug').value);
+      updatePreview();
+    });
+    function updatePreview() {
+      $('urlPreview').textContent = `${location.origin}/?shop=${$('su_slug').value || '...'}`;
+    }
+
+    $('su_btn').onclick = async () => {
+      const body = {
+        shop_name: $('su_name').value.trim(),
+        shop_slug: $('su_slug').value.trim(),
+        address: $('su_address').value.trim(),
+        phone: $('su_phone').value.trim(),
+        barber_name: $('su_barber').value.trim(),
+        password: $('su_password').value,
+        contact_email: $('su_email').value.trim(),
+        plan: selectedPlan?.plan,
+      };
+      const a = $('su_alert');
+      a.style.display = 'none';
+      $('su_btn').disabled = true; $('su_btn').textContent = 'Δημιουργία...';
+      try {
+        const r = await fetch('/api/signup', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Σφάλμα');
+        showSuccess(data);
+      } catch (e) {
+        a.style.display = 'block'; a.textContent = e.message;
+        $('su_btn').disabled = false; $('su_btn').textContent = 'Ξεκίνα δωρεάν δοκιμή';
+      }
+    };
+
+    function showSuccess(data) {
+      $('signupView').style.display = 'none';
+      $('successView').style.display = 'block';
+      $('successBookingUrl').textContent = data.booking_url;
+      $('successBookingUrl').href = data.booking_url;
+      $('successAdminUrl').textContent = `${location.origin}/admin.html?shop=${data.shop_slug}`;
+      $('successAdminUrl').href = `${location.origin}/admin.html?shop=${data.shop_slug}`;
+      $('successOpenAdmin').href = `${location.origin}/admin.html?shop=${data.shop_slug}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

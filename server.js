@@ -75,7 +75,20 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+
+// Smart routing για `/`:
+//   - Αν έχει ?shop=slug → booking flow (index.html για πελάτες)
+//   - Αλλιώς → marketing landing (welcome.html)
+// Αυτό κρατάει backward compat για QR codes που δείχνουν στο /?shop=slug.
+app.get('/', (req, res, next) => {
+  if (req.query.shop || req.query.book === '1') {
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  return res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
+  index: false, // δεν θέλουμε να σερβίρει αυτόματα index.html στο /
   maxAge: PROD ? '1d' : 0,
 }));
 
@@ -770,6 +783,8 @@ app.post('/api/signup', signupLimiter, async (req, res) => {
   const address = sanitizeStr(req.body?.address, 160);
   const phone = sanitizePhone(req.body?.phone);
   const barber_name = sanitizeStr(req.body?.barber_name, 60);
+  const contact_email = sanitizeEmail(req.body?.contact_email);
+  const plan = ['solo','duo','team'].includes(req.body?.plan) ? req.body.plan : 'solo';
   const password = String(req.body?.password || '');
 
   if (!shop_name || !slug || !barber_name || !password) {
@@ -779,6 +794,13 @@ app.post('/api/signup', signupLimiter, async (req, res) => {
   if (slug.length < 3) return res.status(400).json({ error: 'Το URL slug πρέπει να έχει 3+ χαρακτήρες.' });
   if (await db.getShopBySlug(slug)) return res.status(409).json({ error: 'Αυτό το slug υπάρχει ήδη.' });
 
+  // Plan → tier rates
+  const planRate = plan === 'team' ? 10 : plan === 'duo' ? 12 : 15;
+
+  // Trial period: 7 ημέρες
+  const trialEnd = new Date();
+  trialEnd.setDate(trialEnd.getDate() + 7);
+
   try {
     const password_hash = auth.hashPassword(password);
     const r = await db.createShop({
@@ -786,6 +808,14 @@ app.post('/api/signup', signupLimiter, async (req, res) => {
       admin_password_hash: password_hash,
     });
     const shopId = r.lastInsertRowid;
+    await db.updateShopSubscription(shopId, {
+      subscription_status: 'trial',
+      subscription_period_end: trialEnd.toISOString().slice(0, 10),
+      monthly_per_barber_eur: planRate,
+      contact_email,
+      admin_phone: phone,
+      is_active: true,
+    });
     const barberSlug = sanitizeSlug(barber_name);
     await db.createBarber({
       shop_id: shopId, slug: barberSlug || 'barber',
@@ -793,13 +823,28 @@ app.post('/api/signup', signupLimiter, async (req, res) => {
       default_capacity: 2, avg_minutes: 30,
       open_hour: 9, close_hour: 20, sort_order: 1,
     });
-    // Auto-login: επιστρέφουμε JWT για άμεση πρόσβαση στο shop admin
+
+    // Send welcome email αν έχει SMTP setup
+    if (contact_email) {
+      const adminUrl = `${PUBLIC_URL}/admin.html?shop=${encodeURIComponent(slug)}`;
+      const bookingUrl = `${PUBLIC_URL}/?shop=${encodeURIComponent(slug)}`;
+      sendEmail(contact_email, `Καλώς ήρθες στο ${APP_NAME}!`,
+        `Ο λογαριασμός σου είναι έτοιμος!\n\nLogin: ${adminUrl}\nBooking URL: ${bookingUrl}\n\nΈχεις 7 μέρες δωρεάν δοκιμή.`,
+        `<h2>Καλώς ήρθες στο ${APP_NAME}!</h2>
+         <p>Ο λογαριασμός σου είναι έτοιμος. Έχεις <strong>7 μέρες δωρεάν δοκιμή</strong>.</p>
+         <p><a href="${adminUrl}" style="background:#0c0c0d;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block">Άνοιξε το Dashboard</a></p>
+         <p>Booking URL για τους πελάτες σου: <a href="${bookingUrl}">${bookingUrl}</a></p>`).catch(() => {});
+    }
+
+    // Auto-login
     setSession(res, { role: 'shop', shopId, shopSlug: slug });
     res.json({
       ok: true,
       shop_slug: slug,
+      plan,
+      trial_ends: trialEnd.toISOString().slice(0, 10),
       booking_url: `${PUBLIC_URL}/?shop=${encodeURIComponent(slug)}`,
-      admin_url: `${PUBLIC_URL}/admin.html`,
+      admin_url: `${PUBLIC_URL}/admin.html?shop=${encodeURIComponent(slug)}`,
       qr_url: `${PUBLIC_URL}/qr.html?shop=${encodeURIComponent(slug)}`,
     });
   } catch (e) {

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Δυνατότητες · Barberhub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <style>
+    .nav-bar { position: sticky; top: 0; z-index: 30; background: rgba(246,245,242,0.85); backdrop-filter: blur(16px); padding: 14px 22px; display: flex; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); }
+    .nav-brand { display: inline-flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; flex: 1; }
+    .nav-brand .mark { width: 28px; height: 28px; border-radius: 7px; background: var(--ink); color: var(--brand-ink); display: inline-flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px; }
+    .nav-links { display: none; gap: 24px; }
+    .nav-links a { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+    @media (min-width: 720px) { .nav-links { display: flex; } }
+    .marketing { max-width: 1100px; margin: 0 auto; padding: 0 22px; }
+    .page-hero { padding: 60px 0 40px; text-align: center; }
+    .page-hero h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 48px; letter-spacing: -0.03em; margin: 0 0 16px; }
+    .page-hero p { color: var(--muted); font-size: 17px; max-width: 580px; margin: 0 auto; }
+    @media (max-width: 720px) { .page-hero h1 { font-size: 32px; } }
+
+    .step-section {
+      display: grid; grid-template-columns: 1fr; gap: 32px;
+      padding: 40px 0; border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    @media (min-width: 800px) {
+      .step-section { grid-template-columns: 1fr 1fr; gap: 64px; }
+      .step-section.reverse .text-col { order: 2; }
+    }
+    .step-section .label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .step-section h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 32px; letter-spacing: -0.02em; margin: 0 0 14px; }
+    .step-section p { color: var(--muted); font-size: 15px; line-height: 1.6; margin: 0 0 20px; }
+    .step-section ul { list-style: none; padding: 0; margin: 0; }
+    .step-section li { padding: 10px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+    .step-section li svg { flex-shrink: 0; margin-top: 2px; color: var(--green); }
+
+    .mockup {
+      background: linear-gradient(135deg, #ece6db, #d4cabc);
+      border-radius: var(--r-lg);
+      padding: 30px 20px;
+      min-height: 360px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .mockup-phone {
+      width: 220px; background: var(--surface);
+      border-radius: 24px; padding: 16px 14px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+    }
+    .mockup-phone .top {
+      width: 60px; height: 4px; background: var(--line-2); border-radius: 2px;
+      margin: 0 auto 14px;
+    }
+    .mockup-phone .row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px; border: 1px solid var(--line); border-radius: 8px;
+      margin-bottom: 6px; font-size: 11px;
+    }
+    .mockup-phone .row .av {
+      width: 24px; height: 24px; border-radius: 50%; background: var(--surface-3);
+      display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .mockup-phone .row .meta { color: var(--muted); font-size: 10px; margin-left: auto; }
+    .mockup-phone h5 { font-family: 'Fraunces', serif; margin: 0 0 10px; font-size: 14px; }
+    .mockup-phone .slot {
+      display: inline-block; padding: 6px 8px; margin: 2px;
+      background: rgba(22,163,74,0.1); color: var(--green);
+      border-radius: 6px; font-size: 10px; font-weight: 600;
+    }
+    .mockup-phone .slot.o { background: rgba(234,124,26,0.15); color: var(--orange); }
+    .mockup-phone .badge-mini { display: inline-block; padding: 2px 6px; background: var(--orange-soft); color: var(--orange); border-radius: 99px; font-size: 9px; font-weight: 700; margin-left: 4px; }
+
+    .footer-cta {
+      padding: 60px 22px; text-align: center;
+      background: var(--ink); color: var(--brand-ink);
+      border-radius: var(--r-lg); margin: 60px auto;
+    }
+    .footer-cta h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 32px; margin: 0 0 14px; }
+    .footer-cta p { color: rgba(255,255,255,0.7); margin: 0 0 24px; }
+    .footer-cta .btn { background: var(--brand-ink); color: var(--ink); }
+
+    .footer { padding: 30px 22px; text-align: center; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <nav class="nav-bar">
+    <a href="/" class="nav-brand"><span class="mark">B</span><span>Barberhub</span></a>
+    <div class="nav-links">
+      <a href="/features.html">Δυνατότητες</a>
+      <a href="/pricing.html">Τιμές</a>
+      <a href="/admin.html">Είσοδος</a>
+    </div>
+    <a href="/pricing.html" class="btn small">Ξεκίνα</a>
+  </nav>
+
+  <div class="marketing">
+    <div class="page-hero">
+      <h1>Πώς δουλεύει.</h1>
+      <p>Δύο πανομοιότυπες οθόνες — μία για τον πελάτη, μία για εσένα. Σχεδιασμένο να μην παίρνει χρόνο από το πραγματικό σου δουλειά.</p>
+    </div>
+
+    <!-- ΟΘΟΝΗ ΠΕΛΑΤΗ -->
+    <section class="step-section">
+      <div class="text-col">
+        <div class="label">Πελάτης</div>
+        <h2>Σκάναρε. Διάλεξε. Στείλε.</h2>
+        <p>Η εφαρμογή ανοίγει στο κινητό του πελάτη χωρίς εγκατάσταση. Οδηγείται βήμα-βήμα — μία απόφαση ανά οθόνη.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Διαλέγει κουρέα μέσα από κάρτες με όνομα και ωράριο</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Διαλέγει υπηρεσία (κούρεμα/φέιντ/γενειάδα)</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Βλέπει τις διαθέσιμες ώρες με χρωματικό κώδικα</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Δίνει όνομα + κινητό · στέλνει αίτημα</li>
+        </ul>
+      </div>
+      <div class="mockup">
+        <div class="mockup-phone">
+          <div class="top"></div>
+          <h5>Διάλεξε ώρα</h5>
+          <div class="muted small" style="margin-bottom: 8px; font-size: 10px">Παρασκευή 1 Μαΐου</div>
+          <div>
+            <span class="slot">09:00</span>
+            <span class="slot">09:30</span>
+            <span class="slot o">10:00</span>
+            <span class="slot">10:30</span>
+            <span class="slot o">11:00</span>
+            <span class="slot">11:30</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ΟΘΟΝΗ ΚΟΥΡΕΑ -->
+    <section class="step-section reverse">
+      <div class="text-col">
+        <div class="label">Κουρέας</div>
+        <h2>Όλα στο κινητό σου. Σαν app.</h2>
+        <p>Ανοίγεις την εφαρμογή από την αρχική οθόνη — όπως κάθε άλλη app. Βλέπεις τα νέα αιτήματα. Πατάς ✓ ή προτείνεις άλλη ώρα.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>🔔 Ειδοποίηση + ήχος όταν έρχεται νέο αίτημα</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Σημερινή σύνοψη: ραντεβού, αιτήματα, έσοδα</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Ιστορικό πελάτη (επισκέψεις, σύνολο)</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Πρόγραμμα ανά ημέρα + εβδομαδιαίο + ρυθμός εργασίας</li>
+        </ul>
+      </div>
+      <div class="mockup">
+        <div class="mockup-phone">
+          <div class="top"></div>
+          <h5>Σήμερα <span class="badge-mini">2 νέα</span></h5>
+          <div class="row">
+            <div class="av">Γ</div>
+            <div>
+              <div style="font-weight: 700">11:00 · Νίκος</div>
+              <div class="muted" style="font-size: 10px">5η επίσκεψη · €75</div>
+            </div>
+            <div class="meta">⭐</div>
+          </div>
+          <div class="row">
+            <div class="av">Α</div>
+            <div>
+              <div style="font-weight: 700">14:30 · Πέτρος</div>
+              <div class="muted" style="font-size: 10px">νέος πελάτης</div>
+            </div>
+          </div>
+          <div class="row" style="background: rgba(234,124,26,0.06); border-color: var(--orange)">
+            <div class="av">Δ</div>
+            <div>
+              <div style="font-weight: 700">17:00 · Δημήτρης</div>
+              <div class="muted" style="font-size: 10px">αίτημα · προς έγκριση</div>
+            </div>
+            <div class="meta">✓ ✗</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTEGRATIONS -->
+    <section class="step-section">
+      <div class="text-col">
+        <div class="label">Συνδέσεις</div>
+        <h2>Δουλεύει με ό,τι ήδη χρησιμοποιείς.</h2>
+        <p>Δεν χρειάζεται να αλλάξεις συνήθειες. Το Barberhub συνδέεται με τις εφαρμογές που οι πελάτες σου ήδη ξέρουν.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Google Maps "Κάντε κράτηση" κουμπί στο Business Profile</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>WhatsApp / Viber / SMS deeplinks για επικοινωνία</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Email επιβεβαιώσεις στους πελάτες</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>QR code για εκτύπωση στο μαγαζί</li>
+        </ul>
+      </div>
+      <div class="mockup">
+        <div class="mockup-phone" style="text-align: center; padding: 30px 20px;">
+          <div style="font-size: 80px; line-height: 1; margin-bottom: 10px">📱</div>
+          <h5>QR · Δωρεάν</h5>
+          <p class="muted" style="font-size: 11px">Εκτυπώνεις, κολλάς στον τοίχο, οι πελάτες σκανάρουν.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-cta">
+      <h2>Δοκίμασέ το.</h2>
+      <p>7 μέρες δωρεάν. Χωρίς κάρτα. Χωρίς δέσμευση.</p>
+      <a href="/pricing.html" class="btn">Φτιάξε τον λογαριασμό σου</a>
+    </div>
+  </div>
+
+  <footer class="footer">© 2026 Barberhub</footer>
+</body>
+</html>
