@@ -306,6 +306,26 @@ function copyToClipboard(text) {
 }
 function closeSheet(id) { $(id).classList.remove('show'); }
 
+// Universal sheet close handlers (X button, Esc key, click outside)
+document.addEventListener('click', (e) => {
+  // Close button (X)
+  const closeBtn = e.target.closest('.sheet-close');
+  if (closeBtn) {
+    const sheet = closeBtn.closest('.sheet-bg');
+    if (sheet) sheet.classList.remove('show');
+    return;
+  }
+  // Click on backdrop (the dark area outside the sheet)
+  if (e.target.classList.contains('sheet-bg')) {
+    e.target.classList.remove('show');
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.sheet-bg.show').forEach(s => s.classList.remove('show'));
+  }
+});
+
 async function api(method, url, body) {
   const opts = { method, credentials: 'include', headers: {} };
   if (body !== undefined) {
