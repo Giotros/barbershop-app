@@ -1,120 +1,93 @@
-# Barbershop App ✂️
+# Barberhub
 
-Εφαρμογή κρατήσεων για ανδρικό κομμωτήριο. Ο πελάτης σκανάρει QR, στέλνει **αίτημα** ραντεβού, και ο κουρέας το εγκρίνει ή προτείνει άλλη ώρα μέσω **WhatsApp / Viber / SMS**. Στέλνεται αυτόματα **SMS υπενθύμισης 30' πριν** το ραντεβού + **email επιβεβαίωσης**.
+Multi-tenant SaaS για online κρατήσεις κουρείων. PHP-style clean URLs, Postgres backend, mobile-first UI.
 
-## Τι περιέχει
+---
 
-- **`/`** — Φόρμα πελάτη με χρωματικό κώδικα κινητικότητας (πράσινο/πορτοκαλί/κόκκινο), επιλογή τύπου κουρέματος και διάρκειας
-- **`/admin.html`** — Σελίδα διαχείρισης (login με κωδικό): έγκριση/απόρριψη/αλλαγή ώρας, deeplinks σε WhatsApp/Viber/SMS, νέο ραντεβού
-- **`/qr.html`** — Εκτυπώσιμο QR code που οδηγεί στη φόρμα
+## Public URLs
 
-## Λειτουργίες
+| Path | Σκοπός |
+|---|---|
+| `/` | Marketing landing |
+| `/features` | Δυνατότητες |
+| `/pricing` | Πακέτα + signup |
+| `/?shop=SLUG` | Booking page πελάτη |
+| `/admin` | Login + dashboard κουρέα |
+| `/admin/today` | Σήμερα |
+| `/admin/appointments` | Ραντεβού |
+| `/admin/schedule` | Πρόγραμμα |
+| `/admin/settings` | Ρυθμίσεις |
+| `/creator` | Creator dashboard (marketplace owner) |
+| `/qr?shop=SLUG` | Εκτυπώσιμο QR |
 
-- **Αίτημα → Έγκριση**: το slot δεν δεσμεύεται μέχρι ο κουρέας να εγκρίνει. Πολλαπλοί πελάτες μπορούν να ζητήσουν την ίδια ώρα.
-- **Κινητικότητα**: ο πελάτης βλέπει σε κάθε ώρα _Χαλαρή / Μέτρια / Πολύς κόσμος / Κλειστή_ — ώστε να επιλέγει ευέλικτα.
-- **Ομαδοποίηση ωρών**: 🌅 Πρωί / ☀️ Μεσημέρι / 🌆 Απόγευμα.
-- **Τύπος κουρέματος**: Κλασικό, ψαλίδι, fade, κούρεμα+γενειάδα, σχέδιο, παιδικό — με ενδεικτική διάρκεια.
-- **Επικοινωνία πελάτη**: ένα κλικ στο admin → ανοίγει WhatsApp / Viber / SMS / κλήση με προσυμπληρωμένο μήνυμα πρότασης ώρας.
-- **Αυτόματα SMS** σε όλη τη ροή: αίτημα παρελήφθη / επιβεβαίωση / αλλαγή / ακύρωση / **υπενθύμιση 30' πριν**.
-- **Email επιβεβαίωσης** όταν ο κουρέας εγκρίνει το ραντεβού (αν έχει δοθεί email).
-- **Test mode** χωρίς credentials: τα SMS και email τυπώνονται στην κονσόλα — μπορείς να δοκιμάσεις τα πάντα τοπικά.
+Όλα τα `.html` URLs κάνουν 301 redirect σε clean version.
 
-## Εγκατάσταση
+---
+
+## Quick start (local dev)
 
 ```bash
-cd barbershop-app
 npm install
-cp .env.example .env
-# Άνοιξε το .env και άλλαξε ADMIN_PASSWORD, SHOP_NAME, PUBLIC_URL
+cp .env.production.example .env
+# Άλλαξε JWT_SECRET, CREATOR_PASSWORD
 npm start
 ```
 
-Άνοιξε `http://localhost:3000` (φόρμα), `/admin.html` (διαχείριση), `/qr.html` (QR για εκτύπωση).
+Άνοιγμα `http://localhost:3000`.
 
-## Παραμετροποίηση (`.env`)
+## Production deployment (Railway)
 
-| Μεταβλητή | Παράδειγμα | Περιγραφή |
-|---|---|---|
-| `PORT` | `3000` | Πόρτα του server |
-| `PUBLIC_URL` | `https://kourio.example.com` | URL που μπαίνει στο QR (πρέπει να βλέπει στον server) |
-| `ADMIN_PASSWORD` | `μυστικός123` | Κωδικός για το `/admin.html` |
-| `SHOP_NAME` | `Tο Κουρείο μου` | Όνομα στη φόρμα και στα SMS/email |
-| `OPEN_HOUR` / `CLOSE_HOUR` | `09` / `20` | Ώρες λειτουργίας |
-| `SLOT_MINUTES` | `30` | Διάρκεια κάθε slot |
-| `TWILIO_*` | — | Twilio credentials για πραγματικά SMS (αν λείπουν → console) |
-| `SMTP_*` | — | SMTP credentials για email επιβεβαίωσης (αν λείπουν → console) |
+1. **Add PostgreSQL** στο Railway project
+2. Στις Variables του service:
+   - `DATABASE_URL` = reference στο Postgres.DATABASE_PUBLIC_URL
+   - `CREATOR_PASSWORD` = δικός σου ισχυρός κωδικός
+   - `JWT_SECRET` = `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+   - `PUBLIC_URL` = το domain από Railway
+   - `NODE_ENV=production`, `LOG_PII=false`
+3. **Connect GitHub repo** → push → auto-deploy
 
-## Twilio (πραγματικά SMS)
+## Stack
 
-1. Δημιούργησε λογαριασμό στο [twilio.com](https://www.twilio.com) και πάρε ένα νούμερο που στέλνει SMS στην Ελλάδα.
-2. Βάλε στο `.env`: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`.
-3. Αν τα αφήσεις κενά, η εφαρμογή τρέχει σε **test mode** και τυπώνει τα μηνύματα στο terminal — ιδανικό για δοκιμές.
+- **Backend**: Node.js + Express + bcrypt + JWT + helmet + rate-limit
+- **Database**: PostgreSQL (production) / SQLite (local fallback)
+- **Frontend**: Vanilla JS + Inter/Fraunces fonts + custom CSS
+- **Email**: Nodemailer + Gmail SMTP (optional)
+- **SMS**: Twilio (optional)
 
-## Email (επιβεβαίωση)
-
-Συμπλήρωσε `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (π.χ. Gmail SMTP, SendGrid, Mailgun). Αν λείπουν, τα emails τυπώνονται στην κονσόλα.
-
-## Πώς δουλεύει η ροή
-
-1. Πελάτης σκανάρει το **QR** → ανοίγει η φόρμα
-2. Διαλέγει: όνομα, τηλέφωνο, (email), τύπο κουρέματος, ώρα (βλέπει χρωματικά τη ζήτηση)
-3. Πατάει "Στείλε αίτημα" → το αίτημα εμφανίζεται στον κομμωτή
-4. Ο κουρέας στο **admin** πατάει:
-   - **Έγκριση** → SMS + email επιβεβαίωσης στον πελάτη + αυτόματη απόρριψη άλλων αιτημάτων στην ίδια ώρα
-   - **Πρότεινε άλλη** → modal με νέα ώρα + κουμπιά WhatsApp/Viber/SMS με προσυμπληρωμένο μήνυμα
-   - **Απόρριψη** → SMS στον πελάτη
-5. **30 λεπτά πριν** το ραντεβού, στέλνεται αυτόματα SMS υπενθύμισης
-
-## Δοκιμή χωρίς QR
-
-Άνοιξε στο κινητό: `http://<IP-του-υπολογιστή>:3000` (ίδιο WiFi).
-Π.χ. `http://192.168.1.5:3000`. Βάλε αυτό το URL στο `PUBLIC_URL` και θα μπει στο QR.
-
-## Πώς θα έχει την εφαρμογή ο κουρέας στο κινητό
-
-Η εφαρμογή είναι **PWA** — εγκαθίσταται σαν κανονική εφαρμογή στην αρχική οθόνη του κινητού (χωρίς App Store / Play Store).
-
-### iPhone (Safari)
-1. Ανοίγεις στο Safari το `/admin.html` (π.χ. `https://kourio.example.com/admin.html`)
-2. Πατάς το κουμπί **Κοινοποίηση** ⤴ (κάτω στη μέση)
-3. Επιλέγεις **Προσθήκη στην οθόνη Αφετηρίας**
-4. Πάτησε **Προσθήκη** — εμφανίζεται εικονίδιο σαν εφαρμογή
-
-### Android (Chrome)
-1. Ανοίγεις στο Chrome το `/admin.html`
-2. Εμφανίζεται μπάρα στην κορυφή **"Εγκατάσταση"** — πατάς το κουμπί
-3. Ή από το μενού ⋮ → **"Προσθήκη στην αρχική οθόνη"** / **"Εγκατάσταση εφαρμογής"**
-
-### Τι κερδίζει ο κουρέας
-- 📱 Ξεχωριστό **εικονίδιο** στην αρχική οθόνη — ανοίγει σαν εφαρμογή (χωρίς URL bar)
-- 🔔 **Ειδοποιήσεις** όταν έρχεται νέο αίτημα (browser notification + ήχος beep) — για όσο είναι ανοιχτή η εφαρμογή
-- 🔄 **Αυτόματη ανανέωση** κάθε 30s για νέα αιτήματα
-- 📴 Λειτουργεί και χωρίς internet στο interface (αλλά τα δεδομένα χρειάζονται σύνδεση)
-- 🟠 **Badge counter** δίπλα στο tab "Αιτήματα" δείχνει πόσα νέα έχουν έρθει
-
-### Σημαντικό για ειδοποιήσεις
-- Η πρώτη φορά που μπαίνει στο admin θα του ζητηθεί άδεια για ειδοποιήσεις — να πατήσει **Επιτρέπω**
-- Οι ειδοποιήσεις δουλεύουν όσο η εφαρμογή είναι ανοιχτή σε tab/PWA. Για **push notifications στο background** (όταν είναι κλειστή η εφαρμογή), χρειάζεται επιπλέον setup με Web Push (VAPID) — μπορεί να προστεθεί αργότερα.
-
-### Για παραγωγή (production)
-Για να δουλέψει σωστά το PWA + ειδοποιήσεις:
-- Ανέβασε σε **HTTPS** (π.χ. Vercel, Render, Fly.io, ή VPS με Caddy/Nginx + Let's Encrypt)
-- Service workers απαιτούν HTTPS (εκτός localhost)
-
-## Δομή project
+## Files
 
 ```
-barbershop-app/
-├── server.js              # Express API + scheduler boot
-├── database.js            # SQLite (better-sqlite3)
-├── sms.js                 # Twilio + test mode
-├── email.js               # nodemailer + test mode
-├── scheduler.js           # cron για υπενθυμίσεις 30' πριν
-├── package.json
-├── .env.example
-└── public/
-    ├── index.html         # Φόρμα πελάτη με demand colors
-    ├── admin.html         # Admin panel + WhatsApp/Viber deeplinks
-    ├── qr.html            # Εκτυπώσιμο QR
-    └── styles.css
+server.js          Express server + routes
+database.js        DB abstraction (PG/SQLite auto-switch)
+auth.js            bcrypt + JWT helpers
+sms.js             Twilio integration
+email.js           Nodemailer integration
+scheduler.js       Cron για SMS υπενθυμίσεις
+public/
+  welcome.html     Marketing landing
+  features.html    Features page
+  pricing.html     Pricing + signup form
+  index.html       Customer booking flow
+  admin.html       Barber/shop owner dashboard
+  creator.html     Marketplace owner dashboard
+  qr.html          Printable QR
+  styles.css       Global styles
+  manifest.webmanifest, sw.js, icon.svg   PWA
+  robots.txt, sitemap.xml                 SEO
 ```
+
+## Pricing tiers
+
+- **Solo** (1 κουρέας) — €15/μήνα
+- **Duo** (2) — €25/μήνα
+- **Team** (3+) — €10/κουρέα/μήνα
+- 7 ημέρες δωρεάν δοκιμή σε όλα
+
+## Security
+
+- Per-shop auth με bcrypt (12 rounds)
+- JWT cookies (httpOnly, secure σε prod, 7 ημέρες)
+- Rate limiting (login 8/15min, signup 3/hr, booking 5/10min)
+- Helmet headers + CSP
+- Input sanitization (XSS protection)
+- PII masking στα logs

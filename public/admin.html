@@ -876,13 +876,27 @@
 
   /* ============ Tabs ============ */
   function currentPage() { return document.querySelector('.nav-item.active')?.dataset.page; }
-  // URL routing — κάθε tab έχει δικό URL (?page=today / ?page=appts κλπ)
+  // Path-based URL routing: /admin/today, /admin/appointments, ...
   const PAGE_TITLES = {
     today: 'Σήμερα · Διαχείριση κουρείου',
     appts: 'Ραντεβού · Διαχείριση κουρείου',
     schedule: 'Πρόγραμμα · Διαχείριση κουρείου',
     settings: 'Ρυθμίσεις · Διαχείριση κουρείου',
   };
+  // Map μεταξύ url path slug και internal page id
+  const PATH_TO_PAGE = { 'today': 'today', 'appointments': 'appts', 'schedule': 'schedule', 'settings': 'settings' };
+  const PAGE_TO_PATH = { 'today': 'today', 'appts': 'appointments', 'schedule': 'schedule', 'settings': 'settings' };
+
+  function pageFromUrl() {
+    const m = location.pathname.match(/^\/admin\/(today|appointments|schedule|settings)\/?$/);
+    return m ? PATH_TO_PAGE[m[1]] : 'today';
+  }
+  function urlForPage(page) {
+    const slug = PAGE_TO_PATH[page] || 'today';
+    const qs = location.search; // διατηρεί ?shop=xxx
+    return `/admin/${slug}${qs}`;
+  }
+
   function switchToPage(which, push = true) {
     document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.page === which));
     ['today','appts','schedule','settings'].forEach(p => $('page-'+p).style.display = (p === which ? 'block' : 'none'));
@@ -890,12 +904,7 @@
     if (which === 'appts') loadPending();
     if (which === 'schedule') loadScheduleData();
     if (which === 'settings') updateBookingUrl();
-    // Update URL + title
-    if (push) {
-      const url = new URL(location.href);
-      url.searchParams.set('page', which);
-      history.pushState({ page: which }, '', url.toString());
-    }
+    if (push) history.pushState({ page: which }, '', urlForPage(which));
     document.title = PAGE_TITLES[which] || 'Διαχείριση · Barberhub';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -903,14 +912,8 @@
     haptic();
     switchToPage(n.dataset.page);
   });
-  // Initialize from URL
-  const initialPage = new URLSearchParams(location.search).get('page') || 'today';
-  // Note: showMain() θα τρέξει switchToPage μετά το login
-  window.__initialPage = initialPage;
-  window.addEventListener('popstate', (e) => {
-    const p = (new URLSearchParams(location.search)).get('page') || 'today';
-    switchToPage(p, false);
-  });
+  window.__initialPage = pageFromUrl();
+  window.addEventListener('popstate', () => switchToPage(pageFromUrl(), false));
   document.querySelectorAll('[data-atab]').forEach(t => t.onclick = () => {
     document.querySelectorAll('[data-atab]').forEach(x => x.classList.remove('active'));
     t.classList.add('active');

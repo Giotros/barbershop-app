@@ -80,31 +80,51 @@ app.use(cookieParser());
 //   - Αν έχει ?shop=slug → booking flow (index.html για πελάτες)
 //   - Αλλιώς → marketing landing (welcome.html)
 // Αυτό κρατάει backward compat για QR codes που δείχνουν στο /?shop=slug.
-app.get('/', (req, res, next) => {
+// ============ CLEAN URLs ============
+// Όλα τα paths ΧΩΡΙΣ .html. Αν κάποιος βάλει .html → 301 redirect σε clean.
+
+// 301 redirect από .html στο clean version (preserving query string)
+app.get(/^\/(.+)\.html$/i, (req, res) => {
+  const cleanPath = '/' + req.params[0];
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  return res.redirect(301, cleanPath + qs);
+});
+
+// Static files χωρίς .html στο URL
+function servePage(file) {
+  return (req, res) => res.sendFile(path.join(__dirname, 'public', file));
+}
+
+// Homepage: marketing ή booking ανάλογα query
+app.get('/', (req, res) => {
   if (req.query.shop || req.query.book === '1') {
     return res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
   return res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
 });
 
-// PHP-style URL aliases (πιο SEO-friendly)
-app.get('/welcome', (req, res) => res.sendFile(path.join(__dirname, 'public', 'welcome.html')));
-app.get('/features', (req, res) => res.sendFile(path.join(__dirname, 'public', 'features.html')));
-app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));
-app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public', 'signup.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.get('/creator', (req, res) => res.sendFile(path.join(__dirname, 'public', 'creator.html')));
-app.get('/qr', (req, res) => res.sendFile(path.join(__dirname, 'public', 'qr.html')));
+// Public marketing pages
+app.get('/welcome', servePage('welcome.html'));
+app.get('/features', servePage('features.html'));
+app.get('/pricing', servePage('pricing.html'));
 
-// Admin sub-routes — ίδιο HTML αλλά διαφορετικό URL για bookmarks/SEO
-app.get('/admin/today', (req, res) => res.redirect('/admin.html?page=today' + (req.query.shop ? '&shop=' + req.query.shop : '')));
-app.get('/admin/appointments', (req, res) => res.redirect('/admin.html?page=appts' + (req.query.shop ? '&shop=' + req.query.shop : '')));
-app.get('/admin/schedule', (req, res) => res.redirect('/admin.html?page=schedule' + (req.query.shop ? '&shop=' + req.query.shop : '')));
-app.get('/admin/settings', (req, res) => res.redirect('/admin.html?page=settings' + (req.query.shop ? '&shop=' + req.query.shop : '')));
+// App pages
+app.get('/book', servePage('index.html'));
+app.get('/admin', servePage('admin.html'));
+app.get('/creator', servePage('creator.html'));
+app.get('/qr', servePage('qr.html'));
+
+// Admin sub-pages: clean paths + path-based routing (όχι ?page=)
+//   /admin            → today (default)
+//   /admin/today
+//   /admin/appointments
+//   /admin/schedule
+//   /admin/settings
+app.get(/^\/admin\/(today|appointments|schedule|settings)\/?$/, servePage('admin.html'));
 
 // Robots & sitemap
-app.get('/robots.txt', (req, res) => res.sendFile(path.join(__dirname, 'public', 'robots.txt')));
-app.get('/sitemap.xml', (req, res) => res.sendFile(path.join(__dirname, 'public', 'sitemap.xml')));
+app.get('/robots.txt', servePage('robots.txt'));
+app.get('/sitemap.xml', servePage('sitemap.xml'));
 
 app.use(express.static(path.join(__dirname, 'public'), {
   index: false, // δεν θέλουμε να σερβίρει αυτόματα index.html στο /
